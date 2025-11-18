@@ -1,0 +1,29 @@
+# .air.toml
+
+# Working directory
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/main ./cmd/web"
+bin = "./tmp/main"
+# Environment variables
+full_bin = "APP_ENV=dev APP_PORT=8080 ./tmp/main"
+# Watch these filename extensions, reload when these change
+include_ext = ["go", "tpl", "tmpl", "html"]
+# Ignore these filename extensions or directories
+exclude_dir = ["assets", "tmp", "vendor", "frontend/node_modules"]
+
+delay = 1000 # ms
+
+[log]
+time = false
+
+[color]
+main = "magenta"
+watcher = "cyan"
+build = "yellow"
+runner = "green"
+
+[misc]
+clean_on_exit = false

@@ -1,0 +1,18 @@
+# Ignore compiled files
+/tmp
+/vendor
+dist
+node_modules
+
+# Ignore Go files
+*.go
+go.mod
+go.sum
+
+# Ignore database files
+*.db
+*.db-shm
+*.db-wal
+
+# Ignore compiled CSS
+/static/css/output.css
