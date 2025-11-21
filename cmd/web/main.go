@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/AdamBeresnev/op-rating-app/cmd/web/view"
+	"github.com/AdamBeresnev/op-rating-app/views"
 	"github.com/AdamBeresnev/op-rating-app/internal/db"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -26,7 +26,7 @@ func main() {
 	})
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		var testUnits []view.TestUnit
+		var testUnits []views.TestUnit
 		err := database.Select(&testUnits, "SELECT id, name, value, created_at FROM test_unit")
 		if err != nil {
 			log.Printf("Error querying test_unit: %v", err)
@@ -34,7 +34,7 @@ func main() {
 			return
 		}
 		
-		view.Render(w, r, view.IndexPage("op rating 2025", testUnits))
+		views.Render(w, r, views.IndexPage("op rating 2025", testUnits))
 	})
 
 	log.Println("Server starting on http://localhost:8080")

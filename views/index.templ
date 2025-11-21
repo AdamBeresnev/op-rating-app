@@ -1,4 +1,4 @@
-package view
+package views
 
 import "time"
 
@@ -13,7 +13,7 @@ templ IndexPage(title string, testUnits []TestUnit) {
 	@layout(title) {
 		<div class="text-center py-10">
 			<h2 class="text-3xl font-bold mb-4">OP RATINGATOR 9000</h2>
-			<button hx-post="/test-endpoint" hx-swap="outerHTML" class="bg-red-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-bold transition">
+			<button hx-post="/test-endpoint" hx-swap="outerHTML" class="bg-yellow-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-bold transition">
 				BUTTON
 			</button>
 		</div>
