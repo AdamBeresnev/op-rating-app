@@ -5,14 +5,15 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-cmd = "go build -o ./tmp/main ./cmd/web"
+cmd = "templ generate && go build -o ./tmp/main ./cmd/web"
 bin = "./tmp/main"
 # Environment variables
 full_bin = "APP_ENV=dev APP_PORT=8080 ./tmp/main"
 # Watch these filename extensions, reload when these change
-include_ext = ["go", "tpl", "tmpl", "html"]
+include_ext = ["go", "tpl", "tmpl", "html", "templ"]
 # Ignore these filename extensions or directories
 exclude_dir = ["assets", "tmp", "vendor", "frontend/node_modules"]
+exclude_regex = ["_templ.go"]
 
 delay = 1000 # ms
 

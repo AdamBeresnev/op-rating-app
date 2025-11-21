@@ -1,68 +1,44 @@
 package main
 
 import (
-	"html/template"
 	"log"
 	"net/http"
-	"time"
 
+	"github.com/AdamBeresnev/op-rating-app/cmd/web/view"
 	"github.com/AdamBeresnev/op-rating-app/internal/db"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
-
-type TestUnit struct {
-	ID        int       `db:"id"`
-	Name      string    `db:"name"`
-	Value     int       `db:"value"`
-	CreatedAt time.Time `db:"created_at"`
-}
 
 func main() {
 	database := db.InitDB()
 	defer database.Close()
 
-	mux := http.NewServeMux()
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
 
 	fileServer := http.FileServer(http.Dir("./static"))
-	mux.Handle("/static/", http.StripPrefix("/static/", fileServer))
+	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
-	mux.HandleFunc("/test-endpoint", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		
+	r.Post("/test-endpoint", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte(`<div class="bg-green-500 text-black p-4 rounded-lg">Successful API response!!!</div>`))
 	})
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles(
-			"templates/layout.html",
-			"templates/index.html",
-		)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-
-		var testUnits []TestUnit
-		err = database.Select(&testUnits, "SELECT id, name, value, created_at FROM test_unit")
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		var testUnits []view.TestUnit
+		err := database.Select(&testUnits, "SELECT id, name, value, created_at FROM test_unit")
 		if err != nil {
 			log.Printf("Error querying test_unit: %v", err)
 			http.Error(w, "Error querying data", 500)
 			return
 		}
-
-		data := map[string]interface{}{
-			"Title":     "op rating 2025",
-			"TestUnits": testUnits,
-		}
-
-		tmpl.Execute(w, data)
+		
+		view.Render(w, r, view.IndexPage("op rating 2025", testUnits))
 	})
 
 	log.Println("Server starting on http://localhost:8080")
-	if err := http.ListenAndServe(":8080", mux); err != nil {
+	if err := http.ListenAndServe(":8080", r); err != nil {
 		log.Fatal(err)
 	}
 }
