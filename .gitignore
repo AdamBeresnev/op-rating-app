@@ -5,3 +5,4 @@ output.css
 *.db
 *.db-shm
 *.db-wal
+*_templ.go
