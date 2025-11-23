@@ -13,6 +13,11 @@ func InitDB() *sqlx.DB {
 		log.Fatalln("Failed to connect to DB:", err)
 	}
 
+	_, err = db.Exec("PRAGMA foreign_keys = ON;")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	log.Println("Database connected.")
 	return db
 }
