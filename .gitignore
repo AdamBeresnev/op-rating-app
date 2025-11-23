@@ -6,3 +6,4 @@ output.css
 *.db-shm
 *.db-wal
 *_templ.go
+*.code-workspace

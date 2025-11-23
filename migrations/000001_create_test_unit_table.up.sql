@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS test_unit (
+CREATE TABLE test_unit (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     value INTEGER,

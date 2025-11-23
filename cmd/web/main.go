@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/AdamBeresnev/op-rating-app/views"
 	"github.com/AdamBeresnev/op-rating-app/internal/db"
+	"github.com/AdamBeresnev/op-rating-app/views"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -20,6 +20,7 @@ func main() {
 	fileServer := http.FileServer(http.Dir("./static"))
 	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
+	// TODO: Mock protected routes
 	r.Post("/test-endpoint", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte(`<div class="bg-green-500 text-black p-4 rounded-lg">Successful API response!!!</div>`))
@@ -33,7 +34,7 @@ func main() {
 			http.Error(w, "Error querying data", 500)
 			return
 		}
-		
+
 		views.Render(w, r, views.IndexPage("op rating 2025", testUnits))
 	})
 
