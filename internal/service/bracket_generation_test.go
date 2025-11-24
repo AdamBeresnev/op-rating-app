@@ -30,9 +30,8 @@ func setupTestDB(t *testing.T) *sqlx.DB {
 	driver, err := sqlite3.WithInstance(database.DB, &sqlite3.Config{})
 	require.NoError(t, err, "Failed to create migrate driver instance")
 
-	// Adjust migration path for the service package
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://../../migrations", // Corrected path
+		"file://../../migrations",
 		"sqlite3",
 		driver,
 	)
