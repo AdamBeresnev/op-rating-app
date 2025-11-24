@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/AdamBeresnev/op-rating-app/internal/db"
+	"github.com/AdamBeresnev/op-rating-app/internal/service"
+	"github.com/AdamBeresnev/op-rating-app/internal/store"
 	"github.com/AdamBeresnev/op-rating-app/views"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -13,6 +15,11 @@ import (
 func main() {
 	database := db.InitDB()
 	defer database.Close()
+
+	ts := store.NewTournamentStore(database)
+	bs := service.NewBracketService(database, ts)
+	// TODO: unused variable
+	_ = bs
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)

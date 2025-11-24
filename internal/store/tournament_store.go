@@ -1,0 +1,40 @@
+package store
+
+import (
+	"context"
+
+	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
+	"github.com/jmoiron/sqlx"
+)
+
+type TournamentStore struct {
+	db *sqlx.DB
+}
+
+func NewTournamentStore(db *sqlx.DB) *TournamentStore {
+	return &TournamentStore{db: db}
+}
+
+func (s *TournamentStore) CreateTournament(ctx context.Context, tx *sqlx.Tx, tournament *bracket.Tournament) error {
+	_, err := tx.NamedExecContext(ctx, `INSERT INTO tournaments (id, owner_id, name, status, tournament_type, score_requirement)
+        VALUES (:id, :owner_id, :name, :status, :tournament_type, :score_requirement)`, tournament)
+	return err
+}
+
+func (s *TournamentStore) CreateEntries(ctx context.Context, tx *sqlx.Tx, entries []bracket.Entry) error {
+	if len(entries) == 0 {
+		return nil
+	}
+	_, err := tx.NamedExecContext(ctx, `INSERT INTO entries (id, tournament_id, name, seed, embed_link)
+            VALUES (:id, :tournament_id, :name, :seed, :embed_link)`, entries)
+	return err
+}
+
+func (s *TournamentStore) CreateMatches(ctx context.Context, tx *sqlx.Tx, matches []bracket.Match) error {
+	if len(matches) == 0 {
+		return nil
+	}
+	_, err := tx.NamedExecContext(ctx, `INSERT INTO matches (id, tournament_id, bracket_side, round_number, match_order, entry_1_id, entry_2_id, status, winner_next_match_id, winner_next_slot)
+		VALUES (:id, :tournament_id, :bracket_side, :round_number, :match_order, :entry_1_id, :entry_2_id, :status, :winner_next_match_id, :winner_next_slot)`, matches)
+	return err
+}
