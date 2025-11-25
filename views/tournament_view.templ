@@ -39,28 +39,18 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 
 			<div class="space-y-8">
 				<div>
-					<h2 class="text-xl font-bold mb-4">Entries</h2>
-					<ul class="bg-gray-800 rounded-lg p-4 space-y-2 max-h-60 overflow-y-auto">
-						for _, entry := range entries {
-							<li class="flex justify-between items-center border-b border-gray-700 last:border-0 pb-2 last:pb-0">
-								<span>#{ fmt.Sprint(entry.Seed) } { entry.Name }</span>
-								if entry.EmbedLink != nil {
-									<a href={ templ.SafeURL(*entry.EmbedLink) } target="_blank" class="text-blue-400 hover:text-blue-300 text-xs">Link</a>
-								}
-							</li>
-						}
-					</ul>
-				</div>
-
-				<div>
 					<h2 class="text-xl font-bold mb-4">Bracket</h2>
 					<div class="flex flex-row overflow-x-auto gap-8 pb-4">
 						for _, roundNum := range roundNums {
-							<div class="flex flex-col justify-around gap-4 min-w-[250px]">
-								<h3 class="text-center text-gray-400 font-bold mb-2">Round { fmt.Sprint(roundNum) }</h3>
-								for _, match := range rounds[roundNum] {
-									@MatchCard(match, entryMap)
-								}
+							<div class="flex flex-col min-w-[250px]">
+								<h3 class="text-center text-gray-400 font-bold mb-4">Round { fmt.Sprint(roundNum) }</h3>
+								<div class="flex flex-col justify-around flex-1">
+									for _, match := range rounds[roundNum] {
+										<div class="py-2 w-full">
+											@MatchCard(match, entryMap)
+										</div>
+									}
+								</div>
 							</div>
 						}
 					</div>
