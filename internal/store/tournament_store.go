@@ -38,3 +38,21 @@ func (s *TournamentStore) CreateMatches(ctx context.Context, tx *sqlx.Tx, matche
 		VALUES (:id, :tournament_id, :bracket_side, :round_number, :match_order, :entry_1_id, :entry_2_id, :status, :winner_next_match_id, :winner_next_slot)`, matches)
 	return err
 }
+
+func (s *TournamentStore) GetTournament(ctx context.Context, id string) (*bracket.Tournament, error) {
+	var tournament bracket.Tournament
+	err := s.db.GetContext(ctx, &tournament, "SELECT * FROM tournaments WHERE id = ?", id)
+	return &tournament, err
+}
+
+func (s *TournamentStore) GetEntries(ctx context.Context, tournamentID string) ([]bracket.Entry, error) {
+	var entries []bracket.Entry
+	err := s.db.SelectContext(ctx, &entries, "SELECT * FROM entries WHERE tournament_id = ? ORDER BY seed ASC", tournamentID)
+	return entries, err
+}
+
+func (s *TournamentStore) GetMatches(ctx context.Context, tournamentID string) ([]bracket.Match, error) {
+	var matches []bracket.Match
+	err := s.db.SelectContext(ctx, &matches, "SELECT * FROM matches WHERE tournament_id = ? ORDER BY round_number ASC, match_order ASC", tournamentID)
+	return matches, err
+}

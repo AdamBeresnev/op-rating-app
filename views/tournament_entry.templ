@@ -1,0 +1,11 @@
+package views
+
+import "fmt"
+
+templ Entry(index int) {
+	<div class="flex items-center space-x-2">
+		<input type="text" name={ "entry_name_" + fmt.Sprint(index) } placeholder="Entry Name" class="w-1/2 rounded-md border-2 border-gray-300 shadow-sm" required/>
+		<input type="text" name={ "entry_embed_link_" + fmt.Sprint(index) } placeholder="Embed Link (Optional)" class="w-1/2 rounded-md border-2 border-gray-300 shadow-sm"/>
+		<button type="button" class="px-2 py-1 bg-red-500 text-white rounded-md" onclick="this.parentElement.remove()">Remove</button>
+	</div>
+}

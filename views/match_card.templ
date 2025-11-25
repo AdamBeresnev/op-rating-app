@@ -1,0 +1,53 @@
+package views
+
+import (
+	"fmt"
+	"github.com/google/uuid"
+	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
+)
+
+templ MatchCard(match bracket.Match, entryMap map[uuid.UUID]bracket.Entry) {
+	<div class="bg-gray-800 rounded p-3 border border-gray-700 shadow-lg relative">
+		<div class="text-xs text-gray-500 mb-2 flex justify-between">
+			<span>Match { match.MatchOrder }</span>
+			if match.Status == bracket.MatchFinished {
+				<span class="text-green-500">Finished</span>
+			} else {
+				<span>{ string(match.Status) }</span>
+			}
+		</div>
+		<div class="space-y-2">
+			<div class="flex justify-between items-center p-2 rounded bg-gray-900">
+				if match.Entry1ID != nil {
+					if e, ok := entryMap[*match.Entry1ID]; ok {
+						<div class="flex items-center overflow-hidden">
+							<span class="text-xs text-gray-400 mr-2">#{ fmt.Sprint(e.Seed) }</span>
+							<span class="font-semibold truncate" title={e.Name}>{ e.Name }</span>
+						</div>
+					} else {
+						<span>Unknown</span>
+					}
+				} else {
+					<span class="text-gray-500 italic">TBD</span>
+				}
+				<span class="font-mono font-bold ml-2">{ fmt.Sprint(match.Score1) }</span>
+			</div>
+			
+			<div class="flex justify-between items-center p-2 rounded bg-gray-900">
+				if match.Entry2ID != nil {
+					if e, ok := entryMap[*match.Entry2ID]; ok {
+						<div class="flex items-center overflow-hidden">
+							<span class="text-xs text-gray-400 mr-2">#{ fmt.Sprint(e.Seed) }</span>
+							<span class="font-semibold truncate" title={e.Name}>{ e.Name }</span>
+						</div>
+					} else {
+						<span>Unknown</span>
+					}
+				} else {
+					<span class="text-gray-500 italic">TBD</span>
+				}
+				<span class="font-mono font-bold ml-2">{ fmt.Sprint(match.Score2) }</span>
+			</div>
+		</div>
+	</div>
+}
