@@ -85,7 +85,8 @@ func newRouter() http.Handler {
 				http.Error(w, fmt.Sprintf("Failed to create tournament: %v", err), http.StatusInternalServerError)
 				return
 			} else {
-				http.Redirect(w, r, fmt.Sprintf("/tournaments/%s", id), http.StatusSeeOther)
+				w.Header().Set("HX-Redirect", fmt.Sprintf("/tournaments/%s", id))
+				w.WriteHeader(http.StatusOK)
 			}
 		})
 	})
