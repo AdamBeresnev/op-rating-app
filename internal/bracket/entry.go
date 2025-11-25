@@ -8,4 +8,5 @@ type Entry struct {
 	Name         string    `db:"name"`
 	Seed         int       `db:"seed"`
 	EmbedLink    *string   `db:"embed_link"`
+	ImageLink    *string   `db:"image_link"`
 }
