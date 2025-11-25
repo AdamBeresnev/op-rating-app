@@ -8,6 +8,7 @@ import (
 )
 
 func InitDB() *sqlx.DB {
+	var err error
 	db, err := sqlx.Connect("sqlite3", "op_rating.db?_journal_mode=WAL")
 	if err != nil {
 		log.Fatalln("Failed to connect to DB:", err)
@@ -19,5 +20,12 @@ func InitDB() *sqlx.DB {
 	}
 
 	log.Println("Database connected.")
+	dbInstance = db
 	return db
+}
+
+var dbInstance *sqlx.DB
+
+func GetDB() *sqlx.DB {
+	return dbInstance
 }

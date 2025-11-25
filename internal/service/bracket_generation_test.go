@@ -151,7 +151,7 @@ func TestCreateTournament(t *testing.T) {
 			localExpectedEntryCount := tc.expectedEntryCount
 			localExpectedMatchCount := tc.expectedMatchCount
 
-			err := bracketService.CreateTournament(ctx, tc.tournamentName, tc.entryInputs)
+			_, err := bracketService.CreateTournament(ctx, tc.tournamentName, tc.entryInputs)
 
 			if tc.expectedError {
 				assert.Error(t, err)

@@ -26,6 +26,35 @@ type EntryInput struct {
 	EmbedLink string
 }
 
+type TournamentData struct {
+	Tournament *bracket.Tournament
+	Entries    []bracket.Entry
+	Matches    []bracket.Match
+}
+
+func (s *BracketGeneration) GetTournamentData(ctx context.Context, id string) (*TournamentData, error) {
+	tournament, err := s.store.GetTournament(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	entries, err := s.store.GetEntries(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	matches, err := s.store.GetMatches(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TournamentData{
+		Tournament: tournament,
+		Entries:    entries,
+		Matches:    matches,
+	}, nil
+}
+
 // Gets the nearest power of 2 while rounding up, so with input 5 it returns 8 and so on
 func calcBracketSize(count int) int {
 	if count <= 0 {
@@ -112,10 +141,10 @@ func (s *BracketGeneration) GenerateSingleElimBracket(tournamentID uuid.UUID, en
 	return matches
 }
 
-func (s *BracketGeneration) CreateTournament(ctx context.Context, name string, entryInputs []EntryInput) error {
+func (s *BracketGeneration) CreateTournament(ctx context.Context, name string, entryInputs []EntryInput) (uuid.UUID, error) {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 	defer tx.Rollback()
 
@@ -131,7 +160,7 @@ func (s *BracketGeneration) CreateTournament(ctx context.Context, name string, e
 	}
 
 	if err := s.store.CreateTournament(ctx, tx, &tournament); err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
 	var entries []bracket.Entry
@@ -148,7 +177,7 @@ func (s *BracketGeneration) CreateTournament(ctx context.Context, name string, e
 	}
 
 	if err := s.store.CreateEntries(ctx, tx, entries); err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
 	matches := s.GenerateSingleElimBracket(tournamentID, entries)
@@ -177,8 +206,8 @@ func (s *BracketGeneration) CreateTournament(ctx context.Context, name string, e
 	}
 
 	if err := s.store.CreateMatches(ctx, tx, matches); err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
-	return tx.Commit()
+	return tournamentID, tx.Commit()
 }
