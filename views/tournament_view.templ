@@ -2,12 +2,12 @@ package views
 
 import (
 	"fmt"
-	"sort"
-	"github.com/google/uuid"
 	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
+	"github.com/google/uuid"
+	"sort"
 )
 
-templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []bracket.Match) {
+templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []bracket.Match, nextMatchID *uuid.UUID) {
 	{{
 		entryMap := make(map[uuid.UUID]bracket.Entry)
 		for _, e := range entries {
@@ -36,7 +36,6 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 				<span class="bg-gray-800 px-2 py-1 rounded text-sm">{ string(t.Status) }</span>
 				<span class="ml-2 text-sm">Type: { string(t.Type) }</span>
 			</div>
-
 			<div class="space-y-8">
 				<div>
 					<h2 class="text-xl font-bold mb-4">Bracket</h2>
@@ -47,7 +46,7 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 								<div class="flex flex-col justify-around flex-1">
 									for _, match := range rounds[roundNum] {
 										<div class="py-2 w-full">
-											@MatchCard(match, entryMap)
+											@MatchCard(match, entryMap, nextMatchID)
 										</div>
 									}
 								</div>

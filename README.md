@@ -1,6 +1,6 @@
 # OP Rating app
 
-TODO: The entire app :)
+TODO: The other half of the app
 Uses Go, HTMX, and Tailwind CSS.
 
 ### Prerequisites
@@ -16,6 +16,10 @@ Install these first (yes, we still need node. Don't ask.):
 4.  **`air`**
     ```bash
     go install github.com/air-verse/air@latest
+    ```
+5.  **TailwindCSS CLI**
+    ```
+    npm install tailwindcss @tailwindcss/cli
     ```
 
 ### Installation
