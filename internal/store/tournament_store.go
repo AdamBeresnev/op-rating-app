@@ -2,8 +2,10 @@ package store
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
+	"github.com/AdamBeresnev/op-rating-app/internal/middleware"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -43,6 +45,16 @@ func (s *TournamentStore) GetTournament(ctx context.Context, id string) (*bracke
 	var tournament bracket.Tournament
 	err := s.db.GetContext(ctx, &tournament, "SELECT * FROM tournaments WHERE id = ?", id)
 	return &tournament, err
+}
+
+func (s *TournamentStore) GetTournamentsByUserID(ctx context.Context) ([]bracket.Tournament, error) {
+	var tournaments []bracket.Tournament
+	userID, ok := middleware.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("user ID not found in the context")
+	}
+	err := s.db.SelectContext(ctx, &tournaments, "SELECT * FROM tournaments WHERE owner_id = ? ORDER BY created_at DESC", userID)
+	return tournaments, err
 }
 
 func (s *TournamentStore) GetEntries(ctx context.Context, tournamentID string) ([]bracket.Entry, error) {

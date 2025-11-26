@@ -26,12 +26,11 @@ func newRouter() http.Handler {
 	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
 	// Handle routes
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		views.Index().Render(r.Context(), w)
-	})
-
 	r.Post("/tournaments/entries", func(w http.ResponseWriter, r *http.Request) {
-		r.ParseForm()
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Invalid form data", http.StatusBadRequest)
+			return
+		}
 		keys := make([]int, 0, len(r.Form))
 		for key := range r.Form {
 			if strings.HasPrefix(key, "entry_name_") {
@@ -59,11 +58,26 @@ func newRouter() http.Handler {
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireAuth)
 
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			dbConn := db.GetDB()
+			bracketService := service.NewBracketService(dbConn, store.NewTournamentStore(dbConn))
+
+			tournaments, err := bracketService.GetTournamentsForUser(r.Context())
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Failed to get tournaments: %v", err), http.StatusInternalServerError)
+				return
+			}
+			views.Index(tournaments).Render(r.Context(), w)
+		})
+
 		r.Post("/tournaments", func(w http.ResponseWriter, r *http.Request) {
 			dbConn := db.GetDB()
 			bracketService := service.NewBracketService(dbConn, store.NewTournamentStore(dbConn))
 
-			r.ParseForm()
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "Invalid form data", http.StatusBadRequest)
+				return
+			}
 			name := r.Form.Get("name")
 			var entries []service.EntryInput
 			for key, values := range r.Form {
