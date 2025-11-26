@@ -55,6 +55,10 @@ func (s *BracketGeneration) GetTournamentData(ctx context.Context, id string) (*
 	}, nil
 }
 
+func (s *BracketGeneration) GetTournamentsForUser(ctx context.Context) ([]bracket.Tournament, error) {
+	return s.store.GetTournamentsByUserID(ctx)
+}
+
 // Gets the nearest power of 2 while rounding up, so with input 5 it returns 8 and so on
 func calcBracketSize(count int) int {
 	if count <= 0 {

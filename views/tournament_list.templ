@@ -1,0 +1,46 @@
+package views
+
+import (
+	"fmt"
+	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
+)
+
+templ TournamentList(tournaments []bracket.Tournament) {
+	<div class="container mx-auto p-4">
+		<div class="flex justify-between items-center mb-8">
+			<h1 class="text-3xl font-bold">Tournaments</h1>
+			<a href="/tournaments/create" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+				Create New
+			</a>
+		</div>
+
+		if len(tournaments) == 0 {
+			<div class="text-center py-12 text-gray-400">
+				<p class="text-xl mb-4">You haven't created any tournaments yet.</p>
+				<a href="/tournaments/create" class="text-blue-400 hover:text-blue-300 hover:underline">
+				</a>
+			</div>
+		} else {
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				for _, t := range tournaments {
+					<a href={ fmt.Sprintf("/tournaments/%s", t.ID) } class="block bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition duration-200 border border-gray-700 hover:border-gray-600">
+						<div class="flex justify-between items-start mb-4">
+							<h2 class="text-xl font-semibold text-white truncate pr-4">{ t.Name }</h2>
+							if t.Status == "completed" {
+								<span class="bg-green-900 text-green-200 text-xs px-2 py-1 rounded uppercase font-bold tracking-wider">Completed</span>
+							} else if t.Status == "started" {
+								<span class="bg-blue-900 text-blue-200 text-xs px-2 py-1 rounded uppercase font-bold tracking-wider">Active</span>
+							} else {
+								<span class="bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded uppercase font-bold tracking-wider">Draft</span>
+							}
+						</div>
+						<div class="text-gray-400 text-sm space-y-1">
+							<p>Type: <span class="text-gray-300 capitalize">{ string(t.Type) }</span></p>
+							<p>Created: <span class="text-gray-300">{ t.CreatedAt.Format("Jan 02, 2006") }</span></p>
+						</div>
+					</a>
+				}
+			</div>
+		}
+	</div>
+}
