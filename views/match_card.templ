@@ -2,27 +2,45 @@ package views
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
+	"github.com/google/uuid"
 )
 
-templ MatchCard(match bracket.Match, entryMap map[uuid.UUID]bracket.Entry) {
-	<div class="bg-gray-800 rounded p-3 border border-gray-700 shadow-lg relative">
+templ MatchCardContent(match bracket.Match, entryMap map[uuid.UUID]bracket.Entry, isActionable bool) {
+	<div class={ "bg-gray-700 rounded p-3 border shadow-lg relative", templ.KV("border-yellow-500 ring-1 ring-yellow-500", isActionable), templ.KV("border-gray-700", !isActionable), templ.KV("opacity-50", match.IsBye) }>
 		<div class="text-xs text-gray-500 mb-2 flex justify-between">
-			<span>Match { match.MatchOrder }</span>
+			<span>Match { fmt.Sprint(match.MatchOrder) }</span>
 			if match.Status == bracket.MatchFinished {
 				<span class="text-green-500">Finished</span>
+			} else if isActionable {
+				<span class="text-yellow-500 font-bold">Vote Now &rarr;</span>
 			} else {
 				<span>{ string(match.Status) }</span>
 			}
 		</div>
+		// I went a bit mad with power here
+		// There's a non zero chance I added too many of these tailwind classes and they could possibly overlap if multiple conditions are satisfied
+		// I'll rework this once I have an actual figma design. Or any design guidelines whatsoever.
 		<div class="space-y-2">
-			<div class="flex justify-between items-center p-2 rounded bg-gray-900">
+			// Entry 1
+			<div
+				class={
+					"flex justify-between items-center p-2 rounded border",
+					templ.KV("bg-gray-900 border-transparent", !isActionable && !match.IsWinner(1) && !match.IsLoser(1) && !match.IsBye),
+					templ.KV("bg-gray-800 border-gray-600", isActionable),
+					templ.KV("bg-green-900/30 border-green-500 text-white", match.IsWinner(1)),
+					templ.KV("bg-gray-900/50 border-transparent opacity-50", match.IsLoser(1)),
+					templ.KV("bg-gray-900/30 border-gray-700", match.IsBye),
+				}
+			>
 				if match.Entry1ID != nil {
 					if e, ok := entryMap[*match.Entry1ID]; ok {
-						<div class="flex items-center overflow-hidden">
-							<span class="text-xs text-gray-400 mr-2">#{ fmt.Sprint(e.Seed) }</span>
-							<span class="font-semibold truncate" title={e.Name}>{ e.Name }</span>
+						<div class="flex items-center overflow-hidden w-full">
+							<span class="text-xs text-gray-400 mr-2 shrink-0">#{ fmt.Sprint(e.Seed) }</span>
+							<span class="font-semibold truncate" title={ e.Name }>{ e.Name }</span>
+							if match.IsWinner(1) {
+								<span class="ml-auto text-green-400 text-xs font-bold uppercase tracking-wider">Winner</span>
+							}
 						</div>
 					} else {
 						<span>Unknown</span>
@@ -30,15 +48,26 @@ templ MatchCard(match bracket.Match, entryMap map[uuid.UUID]bracket.Entry) {
 				} else {
 					<span class="text-gray-500 italic">TBD</span>
 				}
-				<span class="font-mono font-bold ml-2">{ fmt.Sprint(match.Score1) }</span>
 			</div>
-			
-			<div class="flex justify-between items-center p-2 rounded bg-gray-900">
+			// Entry 2
+			<div
+				class={
+					"flex justify-between items-center p-2 rounded border",
+					templ.KV("bg-gray-900 border-transparent", !isActionable && !match.IsWinner(2) && !match.IsLoser(2) && !match.IsBye),
+					templ.KV("bg-gray-800 border-gray-600", isActionable),
+					templ.KV("bg-green-900/30 border-green-500 text-white", match.IsWinner(2)),
+					templ.KV("bg-gray-900/50 border-transparent opacity-50", match.IsLoser(2)),
+					templ.KV("bg-gray-900/30 border-gray-700", match.IsBye),
+				}
+			>
 				if match.Entry2ID != nil {
 					if e, ok := entryMap[*match.Entry2ID]; ok {
-						<div class="flex items-center overflow-hidden">
-							<span class="text-xs text-gray-400 mr-2">#{ fmt.Sprint(e.Seed) }</span>
-							<span class="font-semibold truncate" title={e.Name}>{ e.Name }</span>
+						<div class="flex items-center overflow-hidden w-full">
+							<span class="text-xs text-gray-400 mr-2 shrink-0">#{ fmt.Sprint(e.Seed) }</span>
+							<span class="font-semibold truncate" title={ e.Name }>{ e.Name }</span>
+							if match.IsWinner(2) {
+								<span class="ml-auto text-green-400 text-xs font-bold uppercase tracking-wider">Winner</span>
+							}
 						</div>
 					} else {
 						<span>Unknown</span>
@@ -46,8 +75,21 @@ templ MatchCard(match bracket.Match, entryMap map[uuid.UUID]bracket.Entry) {
 				} else {
 					<span class="text-gray-500 italic">TBD</span>
 				}
-				<span class="font-mono font-bold ml-2">{ fmt.Sprint(match.Score2) }</span>
 			</div>
 		</div>
 	</div>
+}
+
+// This isn't strictly necessary either, but I'll have to rewrite this anyway once we implement double elims
+templ MatchCard(match bracket.Match, entryMap map[uuid.UUID]bracket.Entry, nextMatchID *uuid.UUID) {
+	{{ isActionable := nextMatchID != nil && *nextMatchID == match.ID }}
+	if isActionable {
+		<a href={ templ.SafeURL(fmt.Sprintf("/matches/%s", match.ID)) } class="block transition-transform hover:scale-105">
+			@MatchCardContent(match, entryMap, isActionable)
+		</a>
+	} else {
+		<div>
+			@MatchCardContent(match, entryMap, isActionable)
+		</div>
+	}
 }

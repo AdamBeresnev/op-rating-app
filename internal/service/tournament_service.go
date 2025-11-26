@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"math"
 
 	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
@@ -12,13 +13,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type BracketGeneration struct {
+type TournamentService struct {
 	db    *sqlx.DB
 	store *store.TournamentStore
 }
 
-func NewBracketService(db *sqlx.DB, store *store.TournamentStore) *BracketGeneration {
-	return &BracketGeneration{db: db, store: store}
+func NewTournamentService(db *sqlx.DB, store *store.TournamentStore) *TournamentService {
+	return &TournamentService{db: db, store: store}
 }
 
 type EntryInput struct {
@@ -27,12 +28,13 @@ type EntryInput struct {
 }
 
 type TournamentData struct {
-	Tournament *bracket.Tournament
-	Entries    []bracket.Entry
-	Matches    []bracket.Match
+	Tournament  *bracket.Tournament
+	Entries     []bracket.Entry
+	Matches     []bracket.Match
+	NextMatchID *uuid.UUID
 }
 
-func (s *BracketGeneration) GetTournamentData(ctx context.Context, id string) (*TournamentData, error) {
+func (s *TournamentService) GetTournamentData(ctx context.Context, id string) (*TournamentData, error) {
 	tournament, err := s.store.GetTournament(ctx, id)
 	if err != nil {
 		return nil, err
@@ -48,15 +50,29 @@ func (s *BracketGeneration) GetTournamentData(ctx context.Context, id string) (*
 		return nil, err
 	}
 
+	var nextMatchID *uuid.UUID
+	for _, m := range matches {
+		if m.Status != bracket.MatchFinished {
+			id := m.ID
+			nextMatchID = &id
+			break
+		}
+	}
+
 	return &TournamentData{
-		Tournament: tournament,
-		Entries:    entries,
-		Matches:    matches,
+		Tournament:  tournament,
+		Entries:     entries,
+		Matches:     matches,
+		NextMatchID: nextMatchID,
 	}, nil
 }
 
-func (s *BracketGeneration) GetTournamentsForUser(ctx context.Context) ([]bracket.Tournament, error) {
-	return s.store.GetTournamentsByUserID(ctx)
+func (s *TournamentService) GetTournamentsForUser(ctx context.Context) ([]bracket.Tournament, error) {
+	userID, ok := middleware.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("user ID not found in the context")
+	}
+	return s.store.GetTournamentsByUserID(ctx, userID)
 }
 
 // Gets the nearest power of 2 while rounding up, so with input 5 it returns 8 and so on
@@ -97,7 +113,7 @@ func generateRound1Pairs(bracketSize int) [][2]int {
 }
 
 // Generate bracket structure for single elimination
-func (s *BracketGeneration) GenerateSingleElimBracket(tournamentID uuid.UUID, entries []bracket.Entry) []bracket.Match {
+func (s *TournamentService) GenerateSingleElimBracket(tournamentID uuid.UUID, entries []bracket.Entry) []bracket.Match {
 	var matches []bracket.Match
 
 	bracketSize := calcBracketSize(len(entries))
@@ -145,7 +161,7 @@ func (s *BracketGeneration) GenerateSingleElimBracket(tournamentID uuid.UUID, en
 	return matches
 }
 
-func (s *BracketGeneration) CreateTournament(ctx context.Context, name string, entryInputs []EntryInput) (uuid.UUID, error) {
+func (s *TournamentService) CreateTournament(ctx context.Context, name string, entryInputs []EntryInput) (uuid.UUID, error) {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return uuid.Nil, err
@@ -158,7 +174,7 @@ func (s *BracketGeneration) CreateTournament(ctx context.Context, name string, e
 		ID:               tournamentID,
 		OwnerID:          ownerID,
 		Name:             name,
-		Status:           bracket.TournamentDraft,
+		Status:           bracket.TournamentStarted,
 		Type:             bracket.SingleElimination,
 		ScoreRequirement: 0,
 	}
@@ -187,6 +203,12 @@ func (s *BracketGeneration) CreateTournament(ctx context.Context, name string, e
 	matches := s.GenerateSingleElimBracket(tournamentID, entries)
 
 	if len(entries) > 1 {
+		// Create a map for easy lookup to propagate winners
+		matchMap := make(map[uuid.UUID]*bracket.Match)
+		for i := range matches {
+			matchMap[matches[i].ID] = &matches[i]
+		}
+
 		round1Matches := make([]*bracket.Match, 0)
 		for i := range matches {
 			if matches[i].RoundNumber == 1 {
@@ -205,6 +227,41 @@ func (s *BracketGeneration) CreateTournament(ctx context.Context, name string, e
 			}
 			if pair[1] < len(entries) {
 				match.Entry2ID = &entries[pair[1]].ID
+			}
+
+			// Check for byes immediately
+			if match.Entry1ID != nil && match.Entry2ID == nil {
+				match.Status = bracket.MatchFinished
+				slot := 1
+				                match.WinnerSlot = &slot
+				                match.IsBye = true
+				                				// Advance to next match
+				                				if match.WinnerNextMatchID != nil {					if nextMatch, ok := matchMap[*match.WinnerNextMatchID]; ok {
+						if match.WinnerNextSlot != nil {
+							if *match.WinnerNextSlot == 1 {
+								nextMatch.Entry1ID = match.Entry1ID
+							} else {
+								nextMatch.Entry2ID = match.Entry1ID
+							}
+						}
+					}
+				}
+			} else if match.Entry1ID == nil && match.Entry2ID != nil {
+				match.Status = bracket.MatchFinished
+				slot := 2
+				                match.WinnerSlot = &slot
+				                match.IsBye = true
+				                				// Advance to next match
+				                				if match.WinnerNextMatchID != nil {					if nextMatch, ok := matchMap[*match.WinnerNextMatchID]; ok {
+						if match.WinnerNextSlot != nil {
+							if *match.WinnerNextSlot == 1 {
+								nextMatch.Entry1ID = match.Entry2ID
+							} else {
+								nextMatch.Entry2ID = match.Entry2ID
+							}
+						}
+					}
+				}
 			}
 		}
 	}
