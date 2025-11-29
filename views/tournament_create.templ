@@ -10,6 +10,20 @@ templ CreateTournamentPage() {
 					<input type="text" name="name" id="name" class="mt-1 block w-full p-2 rounded-md border-2 border-gray-700 bg-gray-900 text-white placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required/>
 				</div>
 
+				<div>
+					<span class="block text-sm font-medium text-gray-200 mb-2">Tournament Type</span>
+					<div class="flex space-x-4">
+						<div class="flex items-center">
+							<input type="radio" id="type_single" name="type" value="single" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500" checked/>
+							<label for="type_single" class="ml-2 block text-sm font-medium text-gray-200">Single Elimination</label>
+						</div>
+						<div class="flex items-center">
+							<input type="radio" id="type_double" name="type" value="double" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"/>
+							<label for="type_double" class="ml-2 block text-sm font-medium text-gray-200">Double Elimination</label>
+						</div>
+					</div>
+				</div>
+
 				<h2 class="text-xl font-bold">Entries</h2>
 				<div id="entries-container" class="space-y-2">
 					for i := 0; i < 8; i++ {

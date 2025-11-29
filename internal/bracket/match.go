@@ -44,5 +44,16 @@ type Match struct {
 	LoserNextMatchID *uuid.UUID `db:"loser_next_match_id"`
 	LoserNextSlot    *int       `db:"loser_next_slot"`
 
+	WinnerSlot *int `db:"winner_slot"`
+	IsBye      bool `db:"is_bye"`
+
 	CreatedAt time.Time `db:"created_at"`
+}
+
+func (m *Match) IsWinner(slot int) bool {
+	return m.Status == MatchFinished && m.WinnerSlot != nil && *m.WinnerSlot == slot
+}
+
+func (m *Match) IsLoser(slot int) bool {
+	return m.Status == MatchFinished && m.WinnerSlot != nil && *m.WinnerSlot != slot
 }
