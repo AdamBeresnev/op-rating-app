@@ -7,3 +7,4 @@ output.css
 *.db-wal
 *_templ.go
 *.code-workspace
+.env
