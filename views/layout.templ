@@ -1,6 +1,6 @@
 package views
 
-templ layout(title string) {
+templ Layout(title string, showHeader bool) {
 	<!doctype html>
 	<html lang="en">
 		<head>
@@ -12,9 +12,16 @@ templ layout(title string) {
 			<link href="/static/css/output.css" rel="stylesheet"/>
 		</head>
 		<body class="bg-slate-900 text-slate-200 font-sans">
-			<nav class="p-4 border-b border-slate-700 flex justify-between items-center">
-				<a href="/" class="text-xl font-bold text-indigo-400 hover:text-indigo-300">OP Rating</a>
-			</nav>
+			if showHeader {
+				<nav class="p-4 border-b border-slate-700 flex justify-between items-center">
+					<a href="/" class="text-xl font-bold text-indigo-400 hover:text-indigo-300">OP Rating</a>
+					<form hx-post="/logout" hx-trigger="click" class="ml-auto">
+						<button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+							Logout
+						</button>
+					</form>
+				</nav>
+			}
 			<main class="container mx-auto p-4">
 				{ children... }
 			</main>

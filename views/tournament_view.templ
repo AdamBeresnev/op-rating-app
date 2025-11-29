@@ -62,7 +62,7 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 			})
 		}
 	}}
-	@layout(t.Name) {
+	@Layout(t.Name, true) {
 		<div class="container mx-auto p-4">
 			<h1 class="text-3xl font-bold mb-2">{ t.Name }</h1>
 			<div class="text-gray-400 mb-8">
