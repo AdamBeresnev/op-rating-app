@@ -18,3 +18,12 @@ func BadRequest(w http.ResponseWriter, msg string, err error) {
 	}
 	http.Error(w, msg, http.StatusBadRequest)
 }
+
+func NotFound(w http.ResponseWriter, msg string, err error) {
+	if err != nil {
+		slog.Warn("not found", "message", msg, "error", err)
+	} else {
+		slog.Warn("not found", "message", msg)
+	}
+	http.Error(w, msg, http.StatusNotFound)
+}
