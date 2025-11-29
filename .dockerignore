@@ -1,0 +1,8 @@
+node_modules
+tmp
+.git
+.env
+op_rating.db
+op_rating.db-shm
+op_rating.db-wal
+bin
