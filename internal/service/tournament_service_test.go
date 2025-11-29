@@ -153,7 +153,7 @@ func TestCreateTournament(t *testing.T) {
 			localExpectedEntryCount := tc.expectedEntryCount
 			localExpectedMatchCount := tc.expectedMatchCount
 
-			_, err := bracketService.CreateTournament(ctx, tc.tournamentName, tc.entryInputs)
+			_, err := bracketService.CreateTournament(ctx, tc.tournamentName, bracket.SingleElimination, tc.entryInputs)
 
 			if tc.expectedError {
 				assert.Error(t, err)
@@ -183,13 +183,63 @@ func TestCreateTournament(t *testing.T) {
 
 			// Specific case for 4 entries because I couldn't be bothered writing all of them
 			if len(tc.entryInputs) == 4 {
-				for _, match := range matches {
-					if match.RoundNumber == 1 {
-						assert.NotNil(t, match.Entry1ID, "Entry1ID should not be nil for round 1 match")
-						assert.NotNil(t, match.Entry2ID, "Entry2ID should not be nil for round 1 match")
+				var r1Matches []bracket.Match
+				for _, m := range matches {
+					if m.RoundNumber == 1 && m.BracketSide == bracket.WinnersSide {
+						r1Matches = append(r1Matches, m)
 					}
 				}
+
+				// Assuming sorted by MatchOrder
+				match1 := r1Matches[0]
+				assert.Equal(t, 1, match1.MatchOrder)
+
+				var e1, e2 bracket.Entry
+				for _, e := range entries {
+					if e.ID == *match1.Entry1ID {
+						e1 = e
+					}
+					if e.ID == *match1.Entry2ID {
+						e2 = e
+					}
+				}
+
+				assert.True(t, (e1.Seed == 1 && e2.Seed == 4) || (e1.Seed == 4 && e2.Seed == 1), "Match 1 should be Seed 1 vs Seed 4")
 			}
+		})
+	}
+}
+
+func TestGenerateDoubleElimBracket(t *testing.T) {
+	service := &TournamentService{}
+
+	testCases := []struct {
+		name            string
+		entriesCount    int
+		expectedMatches int
+	}{
+		{"4 Entries", 4, 6},
+		{"8 Entries", 8, 14},
+		{"16 Entries", 16, 30},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			entries := make([]bracket.Entry, tc.entriesCount)
+			for i := 0; i < tc.entriesCount; i++ {
+				entries[i] = bracket.Entry{ID: uuid.New()}
+			}
+
+			matches := service.GenerateDoubleElimBracket(uuid.New(), entries)
+			assert.Equal(t, tc.expectedMatches, len(matches))
+
+			gfCount := 0
+			for _, m := range matches {
+				if m.BracketSide == bracket.FinalsSide {
+					gfCount++
+				}
+			}
+			assert.Equal(t, 1, gfCount)
 		})
 	}
 }

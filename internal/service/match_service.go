@@ -74,21 +74,32 @@ func (s *MatchService) AdvanceWinner(ctx context.Context, matchID uuid.UUID, win
 	}
 	defer tx.Rollback()
 
+	tournamentID, err := s.advanceWinnerRecursive(ctx, tx, matchID, winnerEntryID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return tournamentID, tx.Commit()
+}
+
+func (s *MatchService) advanceWinnerRecursive(ctx context.Context, tx *sqlx.Tx, matchID uuid.UUID, winnerEntryID uuid.UUID) (uuid.UUID, error) {
 	match, err := s.store.GetMatchTx(ctx, tx, matchID.String())
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to get match: %w", err)
 	}
 
-	// Verify order
-	hasPending, err := s.store.HasPreviousPendingMatchesTx(ctx, tx, match.TournamentID.String(), match.RoundNumber, match.MatchOrder)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to check match order: %w", err)
-	}
-	if hasPending {
-		return uuid.Nil, fmt.Errorf("matches must be decided in order")
+	// Check for byes
+	if !match.IsBye {
+		hasPending, err := s.store.HasPreviousPendingMatchesTx(ctx, tx, match.TournamentID.String(), match.BracketSide, match.RoundNumber, match.MatchOrder)
+		if err != nil {
+			return uuid.Nil, fmt.Errorf("failed to check match order: %w", err)
+		}
+		if hasPending {
+			return uuid.Nil, fmt.Errorf("matches must be decided in order")
+		}
 	}
 
-	// Verify winner is in the match
+	// Sanity check so we avoid deadlocks
 	if match.Entry1ID != nil && *match.Entry1ID == winnerEntryID {
 		slot := 1
 		match.WinnerSlot = &slot
@@ -105,6 +116,7 @@ func (s *MatchService) AdvanceWinner(ctx context.Context, matchID uuid.UUID, win
 		return uuid.Nil, fmt.Errorf("failed to update match: %w", err)
 	}
 
+	// Propagate Winner
 	if match.WinnerNextMatchID != nil && match.WinnerNextSlot != nil {
 		nextMatch, err := s.store.GetMatchTx(ctx, tx, match.WinnerNextMatchID.String())
 		if err != nil {
@@ -121,6 +133,13 @@ func (s *MatchService) AdvanceWinner(ctx context.Context, matchID uuid.UUID, win
 		if err := s.store.UpdateMatch(ctx, tx, nextMatch); err != nil {
 			return uuid.Nil, fmt.Errorf("failed to update next match: %w", err)
 		}
+
+		// Recursive Auto-Advance if next match is a BYE
+		if nextMatch.IsBye {
+			if _, err := s.advanceWinnerRecursive(ctx, tx, nextMatch.ID, winnerEntryID); err != nil {
+				return uuid.Nil, fmt.Errorf("failed to auto-advance bye match (winner path): %w", err)
+			}
+		}
 	} else {
 		// If there is no next match, update tournament status to finished
 		if err := s.store.UpdateTournamentStatusTx(ctx, tx, match.TournamentID.String(), bracket.TournamentCompleted); err != nil {
@@ -128,5 +147,40 @@ func (s *MatchService) AdvanceWinner(ctx context.Context, matchID uuid.UUID, win
 		}
 	}
 
-	return match.TournamentID, tx.Commit()
+	// Propagate Loser
+	if match.LoserNextMatchID != nil && match.LoserNextSlot != nil {
+		var loserID *uuid.UUID
+		if match.Entry1ID != nil && *match.Entry1ID != winnerEntryID {
+			loserID = match.Entry1ID
+		} else if match.Entry2ID != nil && *match.Entry2ID != winnerEntryID {
+			loserID = match.Entry2ID
+		}
+
+		if loserID != nil {
+			loserMatch, err := s.store.GetMatchTx(ctx, tx, match.LoserNextMatchID.String())
+			if err != nil {
+				return uuid.Nil, fmt.Errorf("failed to get loser next match: %w", err)
+			}
+
+			switch *match.LoserNextSlot {
+			case 1:
+				loserMatch.Entry1ID = loserID
+			case 2:
+				loserMatch.Entry2ID = loserID
+			}
+
+			if err := s.store.UpdateMatch(ctx, tx, loserMatch); err != nil {
+				return uuid.Nil, fmt.Errorf("failed to update loser next match: %w", err)
+			}
+
+			// Recursive Auto-Advance if loser match is a BYE
+			if loserMatch.IsBye {
+				if _, err := s.advanceWinnerRecursive(ctx, tx, loserMatch.ID, *loserID); err != nil {
+					return uuid.Nil, fmt.Errorf("failed to auto-advance bye match (loser path): %w", err)
+				}
+			}
+		}
+	}
+
+	return match.TournamentID, nil
 }
