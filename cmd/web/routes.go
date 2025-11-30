@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -16,16 +17,19 @@ import (
 	"github.com/AdamBeresnev/op-rating-app/internal/service"
 	"github.com/AdamBeresnev/op-rating-app/internal/store"
 	"github.com/AdamBeresnev/op-rating-app/views"
+	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
+	"github.com/markbates/goth/gothic"
 )
 
-func newRouter() http.Handler {
+func newRouter(sessionManager *scs.SessionManager) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
+	r.Use(sessionManager.LoadAndSave)
 
 	// Serve static files
 	fileServer := http.FileServer(http.Dir("./static"))
@@ -62,7 +66,7 @@ func newRouter() http.Handler {
 	})
 
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireAuth)
+		r.Use(middleware.RequireAuth(sessionManager))
 
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			dbConn := db.GetDB()
@@ -192,6 +196,64 @@ func newRouter() http.Handler {
 		})
 	})
 
+	r.Get("/auth/{provider}", func(w http.ResponseWriter, r *http.Request) {
+		provider := chi.URLParam(r, "provider")
+		r = r.WithContext(context.WithValue(r.Context(), "provider", provider))
+
+		gothic.BeginAuthHandler(w, r)
+	})
+
+	r.Get("/auth/{provider}/callback", func(w http.ResponseWriter, r *http.Request) {
+		provider := chi.URLParam(r, "provider")
+		r = r.WithContext(context.WithValue(r.Context(), "provider", provider))
+
+		discordUser, err := gothic.CompleteUserAuth(w, r)
+		if err != nil {
+			httputil.BadRequest(w, "Authentication failure", err)
+			return
+		}
+
+		dbConn := db.GetDB()
+		userService := service.NewUserService(dbConn, store.NewUserStore(dbConn))
+		user, err := userService.FindOrCreateUserByProvider(r.Context(), discordUser)
+		if err != nil {
+			httputil.InternalServerError(w, "Failed to find or create user", err)
+			return
+		}
+
+		sessionManager.Put(r.Context(), "userID", user.ID.String())
+
+		http.Redirect(w, r, "/", http.StatusFound)
+	})
+
+	r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
+		views.LoginPage().Render(r.Context(), w)
+	})
+
+	r.Post("/auth/guest", func(w http.ResponseWriter, r *http.Request) {
+		dbConn := db.GetDB()
+		userService := service.NewUserService(dbConn, store.NewUserStore(dbConn))
+
+		user, err := userService.EnsureGuestUser(r.Context())
+		if err != nil {
+			httputil.InternalServerError(w, "Failed to login as guest", err)
+			return
+		}
+
+		sessionManager.Put(r.Context(), "userID", user.ID.String())
+		http.Redirect(w, r, "/", http.StatusFound)
+	})
+
+	r.Post("/logout", func(w http.ResponseWriter, r *http.Request) {
+		sessionManager.Destroy(r.Context())
+		if r.Header.Get("HX-Request") != "" {
+			w.Header().Set("HX-Redirect", "/login")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		http.Redirect(w, r, "/login", http.StatusFound)
+	})
+
 	r.Get("/tournaments/create", func(w http.ResponseWriter, r *http.Request) {
 		views.CreateTournamentPage().Render(r.Context(), w)
 	})
@@ -216,4 +278,3 @@ func newRouter() http.Handler {
 
 	return r
 }
-
