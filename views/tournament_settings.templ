@@ -1,0 +1,47 @@
+package views
+
+import (
+    "github.com/AdamBeresnev/op-rating-app/internal/bracket"
+)
+
+templ TournamentSettingsPage(t *bracket.Tournament, entries []bracket.Entry) {
+	@AppLayout("Tournament Settings") {
+		<div class="container mx-auto p-4">
+			<div class="container flex flex-row">
+				<h1 class="text-2xl font-bold mb-4 flex-grow">Tournament Settings</h1>
+				<button id="create-btn" type="submit" class="flex-none px-4 py-2 bg-green-500 text-white rounded-md">Save</button>
+			</div>
+			<form hx-post="/tournaments" hx-target="#response" hx-swap="innerHTML" class="space-y-4" hx-disabled-elt="#create-btn">
+				<div>
+					<label for="name" class="block text-sm font-medium text-gray-200">Tournament Name</label>
+					<input type="text" name="name" id="name" placeholder="Tournament name" class="mt-1 block w-full p-2 rounded-md border-2 border-gray-700 bg-gray-900 text-white placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required/>
+				</div>
+				<div>
+					<span class="block text-sm font-medium text-gray-200 mb-2">Tournament Type</span>
+					<div class="flex space-x-4">
+						<div class="flex items-center">
+							<input type="radio" id="type_single" name="type" value="single" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500" checked/>
+							<label for="type_single" class="ml-2 block text-sm font-medium text-gray-200"> Single Elimination</label>
+						</div>
+						<div class="flex items-center">
+							<input type="radio" id="type_double" name="type" value="double" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"/>
+							<label for="type_double" class="ml-2 block text-sm font-medium text-gray-200">Double Elimination</label>
+						</div>
+					</div>
+				</div>
+
+				<h2 class="text-xl font-bold">Add new entries</h2>
+				<textarea
+					placeholder="Entry links"
+					class="w-full p-2 rounded-md border-2 border-gray-700 bg-gray-900 text-white placeholder-gray-400 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm" hx-post="/tournaments/entries" hx-target="#entries-container" hx-swap="beforeend">
+				</textarea>
+
+				<h2 class="text-xl font-bold">Entries</h2>
+				<div id="entries-container" class="flex space-y-2 flex-rows flex-wrap gap-1">
+					@Entry_nw(entries)
+				</div>
+			</form>
+			<div id="response" class="mt-4"></div>
+		</div>
+	}
+}
