@@ -7,25 +7,14 @@ import (
 )
 
 templ MatchCardContent(match bracket.Match, entryMap map[uuid.UUID]bracket.Entry, isActionable bool) {
-	<div class={ "bg-gray-700 rounded p-3 border shadow-lg relative", templ.KV("border-yellow-500 ring-1 ring-yellow-500", isActionable), templ.KV("border-gray-700", !isActionable), templ.KV("opacity-50", match.IsBye) }>
-		<div class="text-xs text-gray-500 mb-2 flex justify-between">
-			<span>Match { fmt.Sprint(match.MatchOrder) }</span>
-			if match.Status == bracket.MatchFinished {
-				<span class="text-green-500">Finished</span>
-			} else if isActionable {
-				<span class="text-yellow-500 font-bold">Vote Now &rarr;</span>
-			} else {
-				<span>{ string(match.Status) }</span>
-			}
-		</div>
+	<div class={ "bg-gray-700 rounded p-2 border shadow-lg relative", templ.KV("border-yellow-500 ring-1 ring-yellow-500", isActionable), templ.KV("border-gray-700", !isActionable), templ.KV("opacity-50", match.IsBye) }>
 		// I went a bit mad with power here
 		// There's a non zero chance I added too many of these tailwind classes and they could possibly overlap if multiple conditions are satisfied
 		// I'll rework this once I have an actual figma design. Or any design guidelines whatsoever.
 		<div class="space-y-2">
-			// Entry 1
 			<div
 				class={
-					"flex justify-between items-center p-2 rounded border",
+					"flex justify-between items-center p-1 rounded border",
 					templ.KV("bg-gray-900 border-transparent", !isActionable && !match.IsWinner(1) && !match.IsLoser(1) && !match.IsBye),
 					templ.KV("bg-gray-800 border-gray-600", isActionable),
 					templ.KV("bg-green-900/30 border-green-500 text-white", match.IsWinner(1)),
@@ -52,7 +41,7 @@ templ MatchCardContent(match bracket.Match, entryMap map[uuid.UUID]bracket.Entry
 			// Entry 2
 			<div
 				class={
-					"flex justify-between items-center p-2 rounded border",
+					"flex justify-between items-center p-1 rounded border",
 					templ.KV("bg-gray-900 border-transparent", !isActionable && !match.IsWinner(2) && !match.IsLoser(2) && !match.IsBye),
 					templ.KV("bg-gray-800 border-gray-600", isActionable),
 					templ.KV("bg-green-900/30 border-green-500 text-white", match.IsWinner(2)),
@@ -83,13 +72,7 @@ templ MatchCardContent(match bracket.Match, entryMap map[uuid.UUID]bracket.Entry
 // This isn't strictly necessary either, but I'll have to rewrite this anyway once we implement double elims
 templ MatchCard(match bracket.Match, entryMap map[uuid.UUID]bracket.Entry, nextMatchID *uuid.UUID) {
 	{{ isActionable := nextMatchID != nil && *nextMatchID == match.ID }}
-	if isActionable {
-		<a href={ templ.SafeURL(fmt.Sprintf("/matches/%s", match.ID)) } class="block transition-transform hover:scale-105">
-			@MatchCardContent(match, entryMap, isActionable)
-		</a>
-	} else {
-		<div>
-			@MatchCardContent(match, entryMap, isActionable)
-		</div>
-	}
+	<a href={ templ.SafeURL(fmt.Sprintf("/matches/%s", match.ID)) } class="block transition-transform hover:scale-105">
+		@MatchCardContent(match, entryMap, isActionable)
+	</a>
 }
