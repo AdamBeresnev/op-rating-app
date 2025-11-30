@@ -18,11 +18,9 @@ type EntryGeneration struct {
 
 func (s EntryGeneration) ParseInput(ctx context.Context, entryLinks string) ([]bracket.Entry, []string, error) {
 	var links []string
+	var returnLinks []string
 	var entries []bracket.Entry
-	var tournamentID uuid.UUID //TODO
-	var entryName string       //TODO
-	var maxSeed int            //TODO
-	var entryImage string      //TODO
+	var tounamentID uuid.UUID //TODO
 
 	links = strings.Split(entryLinks, "\n")
 
@@ -33,23 +31,33 @@ func (s EntryGeneration) ParseInput(ctx context.Context, entryLinks string) ([]b
 	defer tx.Rollback()
 
 	for i, link := range links {
-		e := bracket.Entry{
-			ID:           uuid.New(),
-			TournamentID: tournamentID,
-			Name:         entryName,
-			Seed:         i + maxSeed,
-			EmbedLink:    utils.StringOrNil(link),
-			ImageLink:    utils.StringOrNil(entryImage),
+		e, err := createEntryFromLink(tounamentID, i, link)
+
+		if err != nil {
+			returnLinks = append(returnLinks, link)
+			continue
 		}
 
 		entries = append(entries, e)
 	}
 
-	return entries, links, tx.Commit()
+	return entries, returnLinks, tx.Commit()
 }
 
-func createEntryFromLink(entryLink string) (bracket.Entry, error) {
-	var entry bracket.Entry
-	var entryType string
+func createEntryFromLink(tournamentID uuid.UUID, seed int, entryLink string) (bracket.Entry, error) {
+	var err error
 
+	placeholderName := "Anime"
+	placeholderImage := "https://pub-92474f7785774e91a790e086dfa6b2ef.r2.dev/anime/large-cover/PRdGioMCwXIr2ixbBXDC5yh4A70KA7vZ1JtqCJoE.jpg"
+
+	entry := bracket.Entry{
+		ID:           uuid.New(),
+		TournamentID: tournamentID,
+		Name:         placeholderName,
+		ImageLink:    &placeholderImage,
+		Seed:         seed,
+		EmbedLink:    utils.StringOrNil(entryLink),
+	}
+
+	return entry, err
 }
