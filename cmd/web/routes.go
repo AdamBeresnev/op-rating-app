@@ -81,39 +81,39 @@ func newRouter(sessionManager *scs.SessionManager) http.Handler {
 			views.Index(tournaments).Render(r.Context(), w)
 		})
 
-		// r.Get("/tournaments/create", func(w http.ResponseWriter, r *http.Request) {
-		// 	dbConn := db.GetDB()
-		// 	tournamentService := service.NewTournamentService(dbConn, store.NewTournamentStore(dbConn))
+		r.Get("/tournaments/create", func(w http.ResponseWriter, r *http.Request) {
+			dbConn := db.GetDB()
+			tournamentService := service.NewTournamentService(dbConn, store.NewTournamentStore(dbConn))
 
-		// 	id, err := tournamentService.CreateEmptyTournament(r.Context())
+			id, err := tournamentService.CreateEmptyTournament(r.Context())
 
-		// 	if err != nil {
-		// 		// httputil.InternalServerError(w, "Failed to create tournament", err)
-		// 		httputil.InternalServerError(w, "Pagavau err", err)
-		// 		return
-		// 	}
+			if err != nil {
+				// httputil.InternalServerError(w, "Failed to create tournament", err)
+				httputil.InternalServerError(w, "Pagavau err", err)
+				return
+			}
 
-		// 	if id != uuid.Nil {
-		// 		httputil.InternalServerError(w, "Pagavau id", err)
-		// 		return
-		// 	}
+			if id != uuid.Nil {
+				httputil.InternalServerError(w, "Pagavau id", err)
+				return
+			}
 
-		// 	http.Redirect(w, r, fmt.Sprintf("/tournaments/edit/%s", id), http.StatusOK)
-		// })
+			http.Redirect(w, r, fmt.Sprintf("/tournaments/edit/%s", id), http.StatusOK)
+		})
 
-		// r.Get("/tournaments/edit/{id}", func(w http.ResponseWriter, r *http.Request) {
-		// 	dbConn := db.GetDB()
-		// 	bracketService := service.NewTournamentService(dbConn, store.NewTournamentStore(dbConn))
-		// 	id := chi.URLParam(r, "id")
-		// 	data, err := bracketService.GetTournamentData(r.Context(), id)
+		r.Get("/tournaments/edit/{id}", func(w http.ResponseWriter, r *http.Request) {
+			dbConn := db.GetDB()
+			bracketService := service.NewTournamentService(dbConn, store.NewTournamentStore(dbConn))
+			id := chi.URLParam(r, "id")
+			data, err := bracketService.GetTournamentData(r.Context(), id)
 
-		// 	if err != nil {
-		// 		httputil.InternalServerError(w, "Failed to load tournament settings", err)
-		// 		return
-		// 	}
+			if err != nil {
+				httputil.InternalServerError(w, "Failed to load tournament settings", err)
+				return
+			}
 
-		// 	views.TournamentSettingsPage(data.Tournament, data.Entries).Render(r.Context(), w)
-		// })
+			views.TournamentSettingsPage(data.Tournament, data.Entries).Render(r.Context(), w)
+		})
 
 		r.Post("/tournaments", func(w http.ResponseWriter, r *http.Request) {
 			dbConn := db.GetDB()
