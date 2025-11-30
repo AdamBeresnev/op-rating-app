@@ -207,7 +207,7 @@ func newRouter(sessionManager *scs.SessionManager) http.Handler {
 		provider := chi.URLParam(r, "provider")
 		r = r.WithContext(context.WithValue(r.Context(), "provider", provider))
 
-		discordUser, err := gothic.CompleteUserAuth(w, r)
+		gothUser, err := gothic.CompleteUserAuth(w, r)
 		if err != nil {
 			httputil.BadRequest(w, "Authentication failure", err)
 			return
@@ -215,7 +215,7 @@ func newRouter(sessionManager *scs.SessionManager) http.Handler {
 
 		dbConn := db.GetDB()
 		userService := service.NewUserService(dbConn, store.NewUserStore(dbConn))
-		user, err := userService.FindOrCreateUserByProvider(r.Context(), discordUser)
+		user, err := userService.FindOrCreateUserByProvider(r.Context(), gothUser)
 		if err != nil {
 			httputil.InternalServerError(w, "Failed to find or create user", err)
 			return

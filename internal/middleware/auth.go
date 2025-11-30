@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/discord"
+	"github.com/markbates/goth/providers/google"
 )
 
 type ContextKey string
@@ -19,10 +20,16 @@ const SuperUserID = "00000000-0000-0000-0000-000000000001"
 func InitAuth() {
 	discordKey := os.Getenv("DISCORD_KEY")
 	discordSecret := os.Getenv("DISCORD_SECRET")
+	discordCallbackURL := os.Getenv("DISCORD_CALLBACK_URL")
 
-	callbackURL := os.Getenv("AUTH_CALLBACK_URL")
+	googleKey := os.Getenv("GOOGLE_KEY")
+	googleSecret := os.Getenv("GOOGLE_SECRET")
+	googleCallbackURL := os.Getenv("GOOGLE_CALLBACK_URL")
 
-	goth.UseProviders(discord.New(discordKey, discordSecret, callbackURL, discord.ScopeIdentify, discord.ScopeEmail))
+	goth.UseProviders(
+		discord.New(discordKey, discordSecret, discordCallbackURL, discord.ScopeIdentify, discord.ScopeEmail),
+		google.New(googleKey, googleSecret, googleCallbackURL, "email", "profile"),
+	)
 }
 
 func RequireAuth(sessionManager *scs.SessionManager) func(http.Handler) http.Handler {

@@ -18,6 +18,7 @@ const (
         WHERE provider = ? 
         AND provider_id = ?
     `
+	getUserByEmailQuery = "SELECT * FROM users WHERE email = ?"
 	createUserQuery = `
 		INSERT INTO users (id, email, username, provider, provider_id, avatar_url) VALUES
 		(:id, :email, :username, :provider, :provider_id, :avatar_url)
@@ -25,7 +26,7 @@ const (
 	updateUserNameAndAvatarQuery = `
 		UPDATE users SET
 		username = :username,
-		avatar_url = :avatar_url,
+		avatar_url = :avatar_url
 		WHERE id = :id
 	`
 )
@@ -41,6 +42,15 @@ func (s *UserStore) GetUserByProvider(ctx context.Context, provider string, prov
 		return nil, err
 	}
 
+	return &user, nil
+}
+
+func (s *UserStore) GetUserByEmail(ctx context.Context, email string) (*users.User, error) {
+	var user users.User
+	err := s.db.GetContext(ctx, &user, getUserByEmailQuery, email)
+	if err != nil {
+		return nil, err
+	}
 	return &user, nil
 }
 
