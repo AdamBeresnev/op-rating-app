@@ -14,18 +14,50 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 			entryMap[e.ID] = e
 		}
 
-		rounds := make(map[int][]bracket.Match)
-		var roundNums []int
+		wbRounds := make(map[int][]bracket.Match)
+		lbRounds := make(map[int][]bracket.Match)
+		finalRounds := make(map[int][]bracket.Match)
+
+		var wbRoundNums []int
+		var lbRoundNums []int
+		var finalRoundNums []int
+
 		for _, m := range matches {
-			if _, exists := rounds[m.RoundNumber]; !exists {
-				roundNums = append(roundNums, m.RoundNumber)
+			if m.BracketSide == bracket.WinnersSide {
+				if _, exists := wbRounds[m.RoundNumber]; !exists {
+					wbRoundNums = append(wbRoundNums, m.RoundNumber)
+				}
+				wbRounds[m.RoundNumber] = append(wbRounds[m.RoundNumber], m)
+			} else if m.BracketSide == bracket.LosersSide {
+				if _, exists := lbRounds[m.RoundNumber]; !exists {
+					lbRoundNums = append(lbRoundNums, m.RoundNumber)
+				}
+				lbRounds[m.RoundNumber] = append(lbRounds[m.RoundNumber], m)
+			} else if m.BracketSide == bracket.FinalsSide {
+				if _, exists := finalRounds[m.RoundNumber]; !exists {
+					finalRoundNums = append(finalRoundNums, m.RoundNumber)
+				}
+				finalRounds[m.RoundNumber] = append(finalRounds[m.RoundNumber], m)
 			}
-			rounds[m.RoundNumber] = append(rounds[m.RoundNumber], m)
 		}
-		sort.Ints(roundNums)
-		for _, r := range roundNums {
-			sort.Slice(rounds[r], func(i, j int) bool {
-				return rounds[r][i].MatchOrder < rounds[r][j].MatchOrder
+
+		sort.Ints(wbRoundNums)
+		sort.Ints(lbRoundNums)
+		sort.Ints(finalRoundNums)
+
+		for _, r := range wbRoundNums {
+			sort.Slice(wbRounds[r], func(i, j int) bool {
+				return wbRounds[r][i].MatchOrder < wbRounds[r][j].MatchOrder
+			})
+		}
+		for _, r := range lbRoundNums {
+			sort.Slice(lbRounds[r], func(i, j int) bool {
+				return lbRounds[r][i].MatchOrder < lbRounds[r][j].MatchOrder
+			})
+		}
+		for _, r := range finalRoundNums {
+			sort.Slice(finalRounds[r], func(i, j int) bool {
+				return finalRounds[r][i].MatchOrder < finalRounds[r][j].MatchOrder
 			})
 		}
 	}}
@@ -36,24 +68,63 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 				<span class="bg-gray-800 px-2 py-1 rounded text-sm">{ string(t.Status) }</span>
 				<span class="ml-2 text-sm">Type: { string(t.Type) }</span>
 			</div>
-			<div class="space-y-8">
-				<div>
-					<h2 class="text-xl font-bold mb-4">Bracket</h2>
-					<div class="flex flex-row overflow-x-auto gap-8 pb-4">
-						for _, roundNum := range roundNums {
-							<div class="flex flex-col min-w-[250px]">
-								<h3 class="text-center text-gray-400 font-bold mb-4">Round { fmt.Sprint(roundNum) }</h3>
-								<div class="flex flex-col justify-around flex-1">
-									for _, match := range rounds[roundNum] {
-										<div class="py-2 w-full">
-											@MatchCard(match, entryMap, nextMatchID)
-										</div>
-									}
+			<div class="space-y-12">
+				if len(wbRoundNums) > 0 {
+					<div>
+						<h2 class="text-xl font-bold mb-4 text-green-400">Winners Bracket</h2>
+						<div class="flex flex-row overflow-x-auto gap-8 pb-4">
+							for _, roundNum := range wbRoundNums {
+								<div class="flex flex-col min-w-[250px]">
+									<h3 class="text-center text-gray-400 font-bold mb-4">Round { fmt.Sprint(roundNum) }</h3>
+									<div class="flex flex-col justify-around flex-1">
+										for _, match := range wbRounds[roundNum] {
+											<div class="py-2 w-full">
+												@MatchCard(match, entryMap, nextMatchID)
+											</div>
+										}
+									</div>
 								</div>
-							</div>
-						}
+							}
+						</div>
 					</div>
-				</div>
+				}
+				if len(lbRoundNums) > 0 {
+					<div>
+						<h2 class="text-xl font-bold mb-4 text-orange-400">Losers Bracket</h2>
+						<div class="flex flex-row overflow-x-auto gap-8 pb-4">
+							for _, roundNum := range lbRoundNums {
+								<div class="flex flex-col min-w-[250px]">
+									<h3 class="text-center text-gray-400 font-bold mb-4">Round { fmt.Sprint(roundNum) }</h3>
+									<div class="flex flex-col justify-around flex-1">
+										for _, match := range lbRounds[roundNum] {
+											<div class="py-2 w-full">
+												@MatchCard(match, entryMap, nextMatchID)
+											</div>
+										}
+									</div>
+								</div>
+							}
+						</div>
+					</div>
+				}
+				if len(finalRoundNums) > 0 {
+					<div>
+						<h2 class="text-xl font-bold mb-4 text-yellow-400">Finals</h2>
+						<div class="flex flex-row overflow-x-auto gap-8 pb-4">
+							for _, roundNum := range finalRoundNums {
+								<div class="flex flex-col min-w-[250px]">
+									<div class="flex flex-col justify-around flex-1">
+										for _, match := range finalRounds[roundNum] {
+											<div class="py-2 w-full">
+												@MatchCard(match, entryMap, nextMatchID)
+											</div>
+										}
+									</div>
+								</div>
+							}
+						</div>
+					</div>
+				}
 			</div>
 		</div>
 	}

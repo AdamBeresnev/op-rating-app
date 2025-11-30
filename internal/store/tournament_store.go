@@ -18,8 +18,8 @@ const (
         VALUES (:id, :owner_id, :name, :status, :tournament_type, :score_requirement)`
 	createEntriesQuery = `INSERT INTO entries (id, tournament_id, name, seed, embed_link)
             VALUES (:id, :tournament_id, :name, :seed, :embed_link)`
-	createMatchesQuery = `INSERT INTO matches (id, tournament_id, bracket_side, round_number, match_order, entry_1_id, entry_2_id, status, winner_next_match_id, winner_next_slot, winner_slot, is_bye)
-		VALUES (:id, :tournament_id, :bracket_side, :round_number, :match_order, :entry_1_id, :entry_2_id, :status, :winner_next_match_id, :winner_next_slot, :winner_slot, :is_bye)`
+	createMatchesQuery = `INSERT INTO matches (id, tournament_id, bracket_side, round_number, match_order, entry_1_id, entry_2_id, status, winner_next_match_id, winner_next_slot, loser_next_match_id, loser_next_slot, winner_slot, is_bye)
+		VALUES (:id, :tournament_id, :bracket_side, :round_number, :match_order, :entry_1_id, :entry_2_id, :status, :winner_next_match_id, :winner_next_slot, :loser_next_match_id, :loser_next_slot, :winner_slot, :is_bye)`
 	getTournamentQuery        = "SELECT * FROM tournaments WHERE id = ?"
 	getTournamentsByUserQuery = "SELECT * FROM tournaments WHERE owner_id = ? ORDER BY created_at DESC"
 	getEntriesQuery           = "SELECT * FROM entries WHERE tournament_id = ? ORDER BY seed ASC"
@@ -45,11 +45,14 @@ const (
 		WHERE id = :id`
 	hasPreviousPendingMatchesQuery = `SELECT count(*) FROM matches 
 		WHERE tournament_id = ? 
+		AND bracket_side = ?
 		AND status != 'finished'
 		AND (round_number < ? OR (round_number = ? AND match_order < ?))`
 	getNextPendingMatchQuery = `SELECT * FROM matches 
 		WHERE tournament_id = ? 
 		AND status != 'finished' 
+		AND entry_1_id IS NOT NULL 
+		AND entry_2_id IS NOT NULL
 		ORDER BY round_number ASC, match_order ASC 
 		LIMIT 1`
 	updateTournamentStatusQuery = "UPDATE tournaments SET status = ? WHERE id = ?"
@@ -127,9 +130,9 @@ func (s *TournamentStore) UpdateMatch(ctx context.Context, tx *sqlx.Tx, match *b
 	return err
 }
 
-func (s *TournamentStore) HasPreviousPendingMatchesTx(ctx context.Context, tx *sqlx.Tx, tournamentID string, roundNumber int, matchOrder int) (bool, error) {
+func (s *TournamentStore) HasPreviousPendingMatchesTx(ctx context.Context, tx *sqlx.Tx, tournamentID string, bracketSide bracket.BracketSide, roundNumber int, matchOrder int) (bool, error) {
 	var count int
-	err := tx.GetContext(ctx, &count, hasPreviousPendingMatchesQuery, tournamentID, roundNumber, roundNumber, matchOrder)
+	err := tx.GetContext(ctx, &count, hasPreviousPendingMatchesQuery, tournamentID, bracketSide, roundNumber, roundNumber, matchOrder)
 	return count > 0, err
 }
 

@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
 	"github.com/AdamBeresnev/op-rating-app/internal/db"
 	"github.com/AdamBeresnev/op-rating-app/internal/httputil"
 	"github.com/AdamBeresnev/op-rating-app/internal/middleware"
@@ -81,23 +83,38 @@ func newRouter() http.Handler {
 				return
 			}
 			name := r.Form.Get("name")
-			var entries []service.EntryInput
-			for key, values := range r.Form {
+			typeStr := r.Form.Get("type")
+			// Default to single elim
+			tournamentType := bracket.SingleElimination
+			if typeStr == "double" {
+				tournamentType = bracket.DoubleElimination
+			}
+
+			var entryIndices []int
+			for key := range r.Form {
 				if strings.HasPrefix(key, "entry_name_") {
 					indexStr := strings.TrimPrefix(key, "entry_name_")
-					entryName := values[0]
-					if entryName != "" {
-						embedLinkKey := "entry_embed_link_" + indexStr
-						embedLink := r.Form.Get(embedLinkKey)
-						entries = append(entries, service.EntryInput{
-							Name:      entryName,
-							EmbedLink: embedLink,
-						})
+					if index, err := strconv.Atoi(indexStr); err == nil {
+						entryIndices = append(entryIndices, index)
 					}
 				}
 			}
+			sort.Ints(entryIndices)
 
-			if id, err := bracketService.CreateTournament(r.Context(), name, entries); err != nil {
+			var entries []service.EntryInput
+			for _, index := range entryIndices {
+				indexStr := strconv.Itoa(index)
+				entryName := r.Form.Get("entry_name_" + indexStr)
+				if entryName != "" {
+					embedLink := r.Form.Get("entry_embed_link_" + indexStr)
+					entries = append(entries, service.EntryInput{
+						Name:      entryName,
+						EmbedLink: embedLink,
+					})
+				}
+			}
+
+			if id, err := bracketService.CreateTournament(r.Context(), name, tournamentType, entries); err != nil {
 				httputil.InternalServerError(w, "Failed to create tournament", err)
 				return
 			} else {
