@@ -87,18 +87,12 @@ func newRouter(sessionManager *scs.SessionManager) http.Handler {
 
 			id, err := tournamentService.CreateEmptyTournament(r.Context())
 
-			if err != nil {
-				// httputil.InternalServerError(w, "Failed to create tournament", err)
-				httputil.InternalServerError(w, "Pagavau err", err)
+			if err != nil || id == uuid.Nil {
+				httputil.InternalServerError(w, "Failed to create tournament", err)
 				return
 			}
 
-			if id != uuid.Nil {
-				httputil.InternalServerError(w, "Pagavau id", err)
-				return
-			}
-
-			http.Redirect(w, r, fmt.Sprintf("/tournaments/edit/%s", id), http.StatusOK)
+			http.Redirect(w, r, fmt.Sprintf("/tournaments/edit/%s", id), http.StatusFound)
 		})
 
 		r.Get("/tournaments/edit/{id}", func(w http.ResponseWriter, r *http.Request) {
