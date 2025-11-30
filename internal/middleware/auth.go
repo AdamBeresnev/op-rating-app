@@ -34,19 +34,19 @@ func InitAuth() {
 	)
 }
 
-func RequireAuth(sessionManager *scs.SessionManager, userStore *store.UserStore) func(http.Handler) http.Handler {
+func LoadAuthenticatedUser(sessionManager *scs.SessionManager, userStore *store.UserStore) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userIDStr := sessionManager.GetString(r.Context(), "userID")
 			if userIDStr == "" {
-				http.Redirect(w, r, "/login", http.StatusFound)
+				next.ServeHTTP(w, r)
 				return
 			}
 
 			userID, err := uuid.Parse(userIDStr)
 			if err != nil {
 				sessionManager.Remove(r.Context(), "userID")
-				http.Redirect(w, r, "/login", http.StatusFound)
+				next.ServeHTTP(w, r)
 				return
 			}
 
@@ -61,6 +61,16 @@ func RequireAuth(sessionManager *scs.SessionManager, userStore *store.UserStore)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func RequireAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if GetAuthenticatedUser(r.Context()) == nil {
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func GetUserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
