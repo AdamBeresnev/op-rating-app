@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/AdamBeresnev/op-rating-app/internal/store"
+	users "github.com/AdamBeresnev/op-rating-app/internal/user"
 	"github.com/alexedwards/scs/v2"
 	"github.com/google/uuid"
 	"github.com/markbates/goth"
@@ -32,7 +34,7 @@ func InitAuth() {
 	)
 }
 
-func RequireAuth(sessionManager *scs.SessionManager) func(http.Handler) http.Handler {
+func RequireAuth(sessionManager *scs.SessionManager, userStore *store.UserStore) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userIDStr := sessionManager.GetString(r.Context(), "userID")
@@ -49,6 +51,13 @@ func RequireAuth(sessionManager *scs.SessionManager) func(http.Handler) http.Han
 			}
 
 			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+
+			// Add the user to context so that we can easily get it whenever we want
+			user, err := userStore.GetUser(ctx, userID)
+			if err == nil {
+				ctx = context.WithValue(ctx, users.UserKey, user)
+			}
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -62,4 +71,16 @@ func GetUserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
 
 	id, ok := val.(uuid.UUID)
 	return id, ok
+}
+
+func GetAuthenticatedUser(ctx context.Context) *users.User {
+	val := ctx.Value(users.UserKey)
+	if val == nil {
+		return nil
+	}
+	user, ok := val.(*users.User)
+	if !ok {
+		return nil
+	}
+	return user
 }
