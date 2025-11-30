@@ -32,6 +32,17 @@ func (s *UserService) FindOrCreateUserByProvider(ctx context.Context, gothUser g
 		return user, nil
 	}
 
+	if err == sql.ErrNoRows && gothUser.Email != "" {
+		user, err = s.store.GetUserByEmail(ctx, gothUser.Email)
+		if err == nil {
+			if utils.OrZero(user.AvatarURL) != gothUser.AvatarURL {
+				*user.AvatarURL = gothUser.AvatarURL
+				s.store.UpdateUserNameAndAvatar(ctx, user)
+			}
+			return user, nil
+		}
+	}
+
 	if err == sql.ErrNoRows {
 		newUser := &users.User{
 			ID:         uuid.New(),
@@ -61,9 +72,6 @@ func (s *UserService) EnsureGuestUser(ctx context.Context) (*users.User, error) 
 			Email:    "guest@op-rating.app",
 			Username: "Guest User",
 		}
-		// We can reuse CreateUser if we handle pointers correctly, or we might need a slightly different logic
-		// given the fields in CreateUser.
-		// Let's check CreateUser implementation in store.
 		err := s.store.CreateUser(ctx, guestUser)
 		return guestUser, err
 	}
