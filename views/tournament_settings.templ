@@ -14,7 +14,7 @@ templ TournamentSettingsPage(t *bracket.Tournament, entries []bracket.Entry) {
 			<form hx-post="/tournaments" hx-target="#response" hx-swap="innerHTML" class="space-y-4" hx-disabled-elt="#create-btn">
 				<div>
 					<label for="name" class="block text-sm font-medium text-gray-200">Tournament Name</label>
-					<input type="text" name="name" id="name" placeholder="Tournament name" class="mt-1 block w-full p-2 rounded-md border-2 border-gray-700 bg-gray-900 text-white placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required/>
+					<input type="text" name="name" id="name" placeholder="Tournament name" value={ t.Name } class="mt-1 block w-full p-2 rounded-md border-2 border-gray-700 bg-gray-900 text-white placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
 				</div>
 				<div>
 					<span class="block text-sm font-medium text-gray-200 mb-2">Tournament Type</span>
@@ -38,7 +38,9 @@ templ TournamentSettingsPage(t *bracket.Tournament, entries []bracket.Entry) {
 
 				<h2 class="text-xl font-bold">Entries</h2>
 				<div id="entries-container" class="flex space-y-2 flex-rows flex-wrap gap-1">
-					@Entry_nw(entries)
+                    for _, e := range entries {
+                        @Entry_nw(e)
+                    }
 				</div>
 			</form>
 			<div id="response" class="mt-4"></div>
