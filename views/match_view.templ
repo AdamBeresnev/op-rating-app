@@ -1,0 +1,128 @@
+package views
+
+import (
+	"fmt"
+	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
+	"github.com/google/uuid"
+)
+
+templ MatchView(match *bracket.Match, entry1 *bracket.Entry, entry2 *bracket.Entry, nextMatchID *uuid.UUID) {
+	@layout("Match") {
+		<div class="container mx-auto p-4 max-w-4xl">
+			<div class="mb-8 flex justify-between items-center">
+				<a href={ templ.SafeURL(fmt.Sprintf("/tournaments/%s", match.TournamentID)) } class="text-blue-400 hover:underline">
+					&larr; Back to Bracket
+				</a>
+				<div class="text-gray-400">
+					Round { fmt.Sprint(match.RoundNumber) } • Match { fmt.Sprint(match.MatchOrder) }
+				</div>
+			</div>
+			<div class="flex flex-col md:flex-row gap-8 justify-center items-stretch" id="match-voting-area">
+				// Entry 1
+				<div class="flex-1 bg-gray-800 rounded-lg p-6 border border-gray-700 flex flex-col items-center text-center relative">
+					if entry1 != nil {
+						<h2 class="text-2xl font-bold mb-4">{ entry1.Name }</h2>
+						if entry1.EmbedLink != nil {
+							<div class="w-full aspect-video bg-black rounded mb-4 overflow-hidden">
+								<iframe src={ *entry1.EmbedLink } class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+							</div>
+						} else {
+							<div class="w-full aspect-video bg-gray-900 rounded mb-4 flex items-center justify-center text-gray-600">
+								No Embed
+							</div>
+						}
+						if match.Status != bracket.MatchFinished && entry2 != nil {
+							<div id="btn-container-1" class="mt-auto w-full min-h-[60px] flex items-center justify-center">
+								<button
+									hx-post={ fmt.Sprintf("/matches/%s/advance", match.ID) }
+									hx-vals={ fmt.Sprintf(`{"winner_id": "%s"}`, entry1.ID) }
+									hx-target="#match-result-footer"
+									hx-swap="innerHTML"
+									class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded transition-colors w-full"
+								>
+									Vote for { entry1.Name }
+								</button>
+							</div>
+						} else if match.IsWinner(1) {
+							<div id="btn-container-1" class="mt-auto w-full min-h-[60px] flex items-center justify-center text-green-500 font-bold text-xl">Winner</div>
+						} else {
+							<div id="btn-container-1" class="mt-auto w-full min-h-[60px] flex items-center justify-center"></div>
+						}
+					} else {
+						<div class="text-gray-500 italic my-auto">TBD</div>
+					}
+				</div>
+				<div class="flex items-center justify-center text-gray-500 font-bold text-xl">
+					VS
+				</div>
+				// Entry 2
+				<div class="flex-1 bg-gray-800 rounded-lg p-6 border border-gray-700 flex flex-col items-center text-center relative">
+					if entry2 != nil {
+						<h2 class="text-2xl font-bold mb-4">{ entry2.Name }</h2>
+						if entry2.EmbedLink != nil {
+							<div class="w-full aspect-video bg-black rounded mb-4 overflow-hidden">
+								<iframe src={ *entry2.EmbedLink } class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+							</div>
+						} else {
+							<div class="w-full aspect-video bg-gray-900 rounded mb-4 flex items-center justify-center text-gray-600">
+								No Embed
+							</div>
+						}
+						if match.Status != bracket.MatchFinished && entry1 != nil {
+							<div id="btn-container-2" class="mt-auto w-full min-h-[60px] flex items-center justify-center">
+								<button
+									hx-post={ fmt.Sprintf("/matches/%s/advance", match.ID) }
+									hx-vals={ fmt.Sprintf(`{"winner_id": "%s"}`, entry2.ID) }
+									hx-target="#match-result-footer"
+									hx-swap="innerHTML"
+									class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded transition-colors w-full"
+								>
+									Vote for { entry2.Name }
+								</button>
+							</div>
+						} else if match.IsWinner(2) {
+							<div id="btn-container-2" class="mt-auto w-full min-h-[60px] flex items-center justify-center text-green-500 font-bold text-xl">Winner</div>
+						} else {
+							<div id="btn-container-2" class="mt-auto w-full min-h-[60px] flex items-center justify-center"></div>
+						}
+					} else {
+						<div class="text-gray-500 italic my-auto">TBD</div>
+					}
+				</div>
+			</div>
+			<div id="match-result-footer" class="mt-8 text-center min-h-[100px]">
+				if match.Status == bracket.MatchFinished && nextMatchID != nil {
+					<div class="mt-8 text-center">
+						<a href={ templ.SafeURL(fmt.Sprintf("/matches/%s", *nextMatchID)) } class="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded text-xl transition-colors">
+							Next Match &rarr;
+						</a>
+					</div>
+				}
+			</div>
+		</div>
+	}
+}
+
+templ MatchVotingResult(nextMatchID *uuid.UUID, tournamentID uuid.UUID, winnerSlot int) {
+	<div class="flex flex-col items-center justify-center p-6 bg-gray-800 rounded border border-green-600 animate-fade-in">
+		<h2 class="text-xl text-green-500 font-bold mb-4">Vote Recorded!</h2>
+		if nextMatchID != nil {
+			<a href={ templ.SafeURL(fmt.Sprintf("/matches/%s", *nextMatchID)) } class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded text-lg transition-colors">
+				Next Match &rarr;
+			</a>
+		} else {
+			<div class="text-lg text-gray-300 mb-2">Tournament Complete!</div>
+			<a href={ templ.SafeURL(fmt.Sprintf("/tournaments/%s", tournamentID)) } class="text-blue-400 hover:underline">
+				Return to Bracket
+			</a>
+		}
+	</div>
+	// Poggers HTMX OOB swap
+	if winnerSlot == 1 {
+		<div id="btn-container-1" hx-swap-oob="true" class="mt-auto w-full min-h-[60px] flex items-center justify-center text-green-500 font-bold text-xl">Winner</div>
+		<div id="btn-container-2" hx-swap-oob="true" class="mt-auto w-full min-h-[60px] flex items-center justify-center opacity-50"></div>
+	} else {
+		<div id="btn-container-1" hx-swap-oob="true" class="mt-auto w-full min-h-[60px] flex items-center justify-center opacity-50"></div>
+		<div id="btn-container-2" hx-swap-oob="true" class="mt-auto w-full min-h-[60px] flex items-center justify-center text-green-500 font-bold text-xl">Winner</div>
+	}
+}

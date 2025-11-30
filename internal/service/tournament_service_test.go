@@ -24,6 +24,8 @@ func setupTestDB(t *testing.T) *sqlx.DB {
 	database, err := sqlx.Connect("sqlite3", "file::memory:")
 	require.NoError(t, err, "Failed to connect to in-memory DB")
 
+	database.SetMaxOpenConns(1)
+
 	_, err = database.Exec("PRAGMA foreign_keys = ON;")
 	require.NoError(t, err)
 
@@ -86,7 +88,7 @@ func TestCreateTournament(t *testing.T) {
 	defer db.Close()
 
 	tournamentStore := store.NewTournamentStore(db)
-	bracketService := NewBracketService(db, tournamentStore)
+	bracketService := NewTournamentService(db, tournamentStore)
 
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, middleware.UserIDKey, uuid.MustParse(middleware.SuperUserID))
