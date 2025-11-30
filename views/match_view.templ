@@ -3,6 +3,7 @@ package views
 import (
 	"fmt"
 	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
+	"github.com/AdamBeresnev/op-rating-app/internal/video"
 	"github.com/google/uuid"
 )
 
@@ -22,15 +23,7 @@ templ MatchView(match *bracket.Match, entry1 *bracket.Entry, entry2 *bracket.Ent
 				<div class="flex-1 bg-gray-800 rounded-lg p-6 border border-gray-700 flex flex-col items-center text-center relative">
 					if entry1 != nil {
 						<h2 class="text-2xl font-bold mb-4">{ entry1.Name }</h2>
-						if entry1.EmbedLink != nil {
-							<div class="w-full aspect-video bg-black rounded mb-4 overflow-hidden">
-								<iframe src={ *entry1.EmbedLink } class="w-full h-full" frameborder="0" allowfullscreen></iframe>
-							</div>
-						} else {
-							<div class="w-full aspect-video bg-gray-900 rounded mb-4 flex items-center justify-center text-gray-600">
-								No Embed
-							</div>
-						}
+						@VideoEmbed(entry1.EmbedLink)
 						if match.Status != bracket.MatchFinished && entry2 != nil {
 							<div id="btn-container-1" class="mt-auto w-full min-h-[60px] flex items-center justify-center">
 								<button
@@ -59,15 +52,7 @@ templ MatchView(match *bracket.Match, entry1 *bracket.Entry, entry2 *bracket.Ent
 				<div class="flex-1 bg-gray-800 rounded-lg p-6 border border-gray-700 flex flex-col items-center text-center relative">
 					if entry2 != nil {
 						<h2 class="text-2xl font-bold mb-4">{ entry2.Name }</h2>
-						if entry2.EmbedLink != nil {
-							<div class="w-full aspect-video bg-black rounded mb-4 overflow-hidden">
-								<iframe src={ *entry2.EmbedLink } class="w-full h-full" frameborder="0" allowfullscreen></iframe>
-							</div>
-						} else {
-							<div class="w-full aspect-video bg-gray-900 rounded mb-4 flex items-center justify-center text-gray-600">
-								No Embed
-							</div>
-						}
+						@VideoEmbed(entry2.EmbedLink)
 						if match.Status != bracket.MatchFinished && entry1 != nil {
 							<div id="btn-container-2" class="mt-auto w-full min-h-[60px] flex items-center justify-center">
 								<button
@@ -124,5 +109,30 @@ templ MatchVotingResult(nextMatchID *uuid.UUID, tournamentID uuid.UUID, winnerSl
 	} else {
 		<div id="btn-container-1" hx-swap-oob="true" class="mt-auto w-full min-h-[60px] flex items-center justify-center opacity-50"></div>
 		<div id="btn-container-2" hx-swap-oob="true" class="mt-auto w-full min-h-[60px] flex items-center justify-center text-green-500 font-bold text-xl">Winner</div>
+	}
+}
+
+templ VideoEmbed(link *string) {
+	if link == nil {
+		<div class="w-full aspect-video bg-gray-900 rounded mb-4 flex items-center justify-center text-gray-600">
+			No Embed
+		</div>
+	} else {
+		{{ info := video.GetEmbedInfo(link) }}
+		if info.Type == video.EmbedTypeNone {
+			<div class="w-full aspect-video bg-gray-900 rounded mb-4 flex items-center justify-center text-gray-600">
+				No Embed
+			</div>
+		} else if info.Type == video.EmbedTypeVideo {
+			<div class="w-full aspect-video bg-black rounded mb-4 overflow-hidden">
+				<video controls class="w-full h-full">
+					<source src={ info.URL }/>
+				</video>
+			</div>
+		} else {
+			<div class="w-full aspect-video bg-black rounded mb-4 overflow-hidden">
+				<iframe src={ info.URL } class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+			</div>
+		}
 	}
 }
