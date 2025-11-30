@@ -340,6 +340,32 @@ func (s *TournamentService) GenerateDoubleElimBracket(tournamentID uuid.UUID, en
 	return matches
 }
 
+func (s *TournamentService) CreateEmptyTournament(ctx context.Context) (uuid.UUID, error) {
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	defer tx.Rollback()
+
+	tournamentID := uuid.New()
+	ownerID, _ := middleware.GetUserIDFromContext(ctx)
+
+	tournament := bracket.Tournament{
+		ID:               tournamentID,
+		OwnerID:          ownerID,
+		Name:             "New Tournament",
+		Status:           bracket.TournamentStarted,
+		Type:             bracket.DoubleElimination,
+		ScoreRequirement: 0,
+	}
+
+	if err := s.store.CreateTournament(ctx, tx, &tournament); err != nil {
+		return uuid.Nil, err
+	}
+
+	return tournamentID, tx.Commit()
+}
+
 func (s *TournamentService) CreateTournament(ctx context.Context, name string, tournamentType bracket.TournamentType, entryInputs []EntryInput) (uuid.UUID, error) {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
