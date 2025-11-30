@@ -11,6 +11,10 @@ func main() {
 	database := db.InitDB()
 	defer database.Close()
 
+	if err := db.RunMigrations(database.DB); err != nil {
+		log.Fatal("Failed to run migrations:", err)
+	}
+
 	router := newRouter()
 
 	log.Println("Server starting on http://localhost:8080")

@@ -23,17 +23,18 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 		var finalRoundNums []int
 
 		for _, m := range matches {
-			if m.BracketSide == bracket.WinnersSide {
+			switch m.BracketSide {
+			case bracket.WinnersSide:
 				if _, exists := wbRounds[m.RoundNumber]; !exists {
 					wbRoundNums = append(wbRoundNums, m.RoundNumber)
 				}
 				wbRounds[m.RoundNumber] = append(wbRounds[m.RoundNumber], m)
-			} else if m.BracketSide == bracket.LosersSide {
+			case bracket.LosersSide:
 				if _, exists := lbRounds[m.RoundNumber]; !exists {
 					lbRoundNums = append(lbRoundNums, m.RoundNumber)
 				}
 				lbRounds[m.RoundNumber] = append(lbRounds[m.RoundNumber], m)
-			} else if m.BracketSide == bracket.FinalsSide {
+			case bracket.FinalsSide:
 				if _, exists := finalRounds[m.RoundNumber]; !exists {
 					finalRoundNums = append(finalRoundNums, m.RoundNumber)
 				}

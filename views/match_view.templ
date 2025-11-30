@@ -119,20 +119,21 @@ templ VideoEmbed(link *string) {
 		</div>
 	} else {
 		{{ info := video.GetEmbedInfo(link) }}
-		if info.Type == video.EmbedTypeNone {
-			<div class="w-full aspect-video bg-gray-900 rounded mb-4 flex items-center justify-center text-gray-600">
-				No Embed
-			</div>
-		} else if info.Type == video.EmbedTypeVideo {
-			<div class="w-full aspect-video bg-black rounded mb-4 overflow-hidden">
-				<video controls class="w-full h-full">
-					<source src={ info.URL }/>
-				</video>
-			</div>
-		} else {
-			<div class="w-full aspect-video bg-black rounded mb-4 overflow-hidden">
-				<iframe src={ info.URL } class="w-full h-full" frameborder="0" allowfullscreen></iframe>
-			</div>
+		switch info.Type {
+			case video.EmbedTypeNone:
+				<div class="w-full aspect-video bg-gray-900 rounded mb-4 flex items-center justify-center text-gray-600">
+					No Embed
+				</div>
+			case video.EmbedTypeVideo:
+				<div class="w-full aspect-video bg-black rounded mb-4 overflow-hidden">
+					<video controls class="w-full h-full">
+						<source src={ info.URL }/>
+					</video>
+				</div>
+			default:
+				<div class="w-full aspect-video bg-black rounded mb-4 overflow-hidden">
+					<iframe src={ info.URL } class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+				</div>
 		}
 	}
 }

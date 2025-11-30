@@ -1,6 +1,8 @@
 package main
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -105,6 +107,10 @@ func newRouter() http.Handler {
 			for _, index := range entryIndices {
 				indexStr := strconv.Itoa(index)
 				entryName := r.Form.Get("entry_name_" + indexStr)
+				if len(entryName) > 50 {
+					httputil.BadRequest(w, fmt.Sprintf("Entry name '%s' exceeds 50 characters", entryName), nil)
+					return
+				}
 				if entryName != "" {
 					embedLink := r.Form.Get("entry_embed_link_" + indexStr)
 					entries = append(entries, service.EntryInput{
@@ -130,6 +136,10 @@ func newRouter() http.Handler {
 
 			data, err := matchService.GetMatchViewData(r.Context(), id)
 			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					httputil.NotFound(w, "Match not found", err)
+					return
+				}
 				httputil.InternalServerError(w, "Failed to get match data", err)
 				return
 			}
@@ -157,6 +167,14 @@ func newRouter() http.Handler {
 			}
 			tournamentID, err := matchService.AdvanceWinner(r.Context(), matchID, winnerID)
 			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					httputil.NotFound(w, "Match not found", err)
+					return
+				}
+				if strings.Contains(err.Error(), "matches must be decided in order") || strings.Contains(err.Error(), "winner is not part of this match") {
+					httputil.BadRequest(w, err.Error(), err)
+					return
+				}
 				httputil.InternalServerError(w, "Failed to advance winner", err)
 				return
 			}
@@ -185,6 +203,10 @@ func newRouter() http.Handler {
 
 		data, err := bracketService.GetTournamentData(r.Context(), id)
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				httputil.NotFound(w, "Tournament not found", err)
+				return
+			}
 			httputil.InternalServerError(w, "Failed to get tournament", err)
 			return
 		}
@@ -194,3 +216,4 @@ func newRouter() http.Handler {
 
 	return r
 }
+
