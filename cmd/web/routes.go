@@ -66,7 +66,8 @@ func newRouter(sessionManager *scs.SessionManager) http.Handler {
 	})
 
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireAuth(sessionManager))
+		dbConn := db.GetDB()
+		r.Use(middleware.RequireAuth(sessionManager, store.NewUserStore(dbConn)))
 
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			dbConn := db.GetDB()

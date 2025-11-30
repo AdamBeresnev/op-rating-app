@@ -6,6 +6,10 @@ import (
 	"github.com/google/uuid"
 )
 
+type ContextKey string
+
+const UserKey ContextKey = "user"
+
 type User struct {
 	ID         uuid.UUID `db:"id"`
 	Email      string    `db:"email"`

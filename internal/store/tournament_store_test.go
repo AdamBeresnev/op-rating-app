@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
-	"github.com/AdamBeresnev/op-rating-app/internal/middleware"
 	"github.com/AdamBeresnev/op-rating-app/internal/utils"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
@@ -16,6 +15,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const testSuperUserID = "00000000-0000-0000-0000-000000000001"
 
 // setupTestDB creates an in-memory SQLite database and applies migrations
 func setupTestDB(t *testing.T) *sqlx.DB {
@@ -51,7 +52,7 @@ func TestCreateTournament(t *testing.T) {
 
 	store := NewTournamentStore(db)
 
-	mockOwnerID := uuid.MustParse(middleware.SuperUserID)
+	mockOwnerID := uuid.MustParse(testSuperUserID)
 
 	tournament := &bracket.Tournament{
 		ID:               uuid.New(),
@@ -92,7 +93,7 @@ func TestCreateEntries(t *testing.T) {
 	store := NewTournamentStore(db)
 
 	tournamentID := uuid.New()
-	mockOwnerID := uuid.MustParse(middleware.SuperUserID)
+	mockOwnerID := uuid.MustParse(testSuperUserID)
 
 	tournament := &bracket.Tournament{
 		ID:               tournamentID,
@@ -147,7 +148,7 @@ func TestCreateMatches(t *testing.T) {
 	store := NewTournamentStore(db)
 
 	tournamentID := uuid.New()
-	mockOwnerID := uuid.MustParse(middleware.SuperUserID)
+	mockOwnerID := uuid.MustParse(testSuperUserID)
 	tournament := &bracket.Tournament{
 		ID:               tournamentID,
 		OwnerID:          mockOwnerID,
