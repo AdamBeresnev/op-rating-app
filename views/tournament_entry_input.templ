@@ -1,0 +1,20 @@
+package views
+
+import "github.com/AdamBeresnev/op-rating-app/internal/bracket"
+
+templ EntryInput(links string, entries []bracket.Entry) {
+    <div class="py-2">
+        <label for="entry_links" class="font-bold">Add new entries</label>
+        <textarea
+            name="entry_links" id="entry_links" hx-post="/tournaments/entries" hx-trigger="keydown[key==='Enter'&&!shiftKey]" hx-target="#entry-input" hx-swap="innerHTML" hx-disabled-elt="create-btn" placeholder="Entry links" class="w-full p-2 rounded-md border-2 border-gray-700 bg-gray-900 text-white placeholder-gray-400 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm">
+            { links }
+        </textarea>
+    </div>
+
+    <h2 class="font-bold">Entries</h2>
+    <div id="entries-container" hx-get="/entries/filter" hx-trigger="change" target="#entry_links" class="flex space-y-2 flex-rows flex-wrap gap-1">
+        for _, e := range entries {
+            @Entry_nw(e)
+        }
+    </div>
+}

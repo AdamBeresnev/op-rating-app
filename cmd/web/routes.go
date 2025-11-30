@@ -38,32 +38,24 @@ func newRouter(sessionManager *scs.SessionManager) http.Handler {
 
 	// Handle routes
 	r.Post("/tournaments/entries", func(w http.ResponseWriter, r *http.Request) {
+		dbConn := db.GetDB()
+		entryService := service.NewEntryService(dbConn, store.NewTournamentStore(dbConn))
+
 		if err := r.ParseForm(); err != nil {
 			httputil.BadRequest(w, "Invalid form data", err)
 			return
 		}
-		keys := make([]int, 0, len(r.Form))
-		for key := range r.Form {
-			if strings.HasPrefix(key, "entry_name_") {
-				indexStr := strings.TrimPrefix(key, "entry_name_")
-				index, err := strconv.Atoi(indexStr)
-				if err == nil {
-					keys = append(keys, index)
-				}
-			}
-		}
-		newIndex := 0
-		if len(keys) > 0 {
-			maxKey := keys[0]
-			for _, key := range keys {
-				if key > maxKey {
-					maxKey = key
-				}
-			}
-			newIndex = maxKey + 1
+
+		entries, err := entryService.ParseInput(r.Context(), r.Form.Get("tournamentID"), r.Form.Get("entry_links"))
+
+		for _, e := range entries {
+			views.Entry_nw(e).Render(r.Context(), w)
 		}
 
-		views.Entry(newIndex).Render(r.Context(), w)
+		if err != nil {
+			httputil.InternalServerError(w, "Failed to parse input", err)
+			return
+		}
 	})
 
 	r.Group(func(r chi.Router) {
