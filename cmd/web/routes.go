@@ -30,6 +30,7 @@ func newRouter(sessionManager *scs.SessionManager) http.Handler {
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(sessionManager.LoadAndSave)
+	r.Use(middleware.LoadAuthenticatedUser(sessionManager, store.NewUserStore(db.GetDB())))
 
 	// Serve static files
 	fileServer := http.FileServer(http.Dir("./static"))
@@ -66,8 +67,7 @@ func newRouter(sessionManager *scs.SessionManager) http.Handler {
 	})
 
 	r.Group(func(r chi.Router) {
-		dbConn := db.GetDB()
-		r.Use(middleware.RequireAuth(sessionManager, store.NewUserStore(dbConn)))
+		r.Use(middleware.RequireAuth)
 
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			dbConn := db.GetDB()
@@ -79,6 +79,10 @@ func newRouter(sessionManager *scs.SessionManager) http.Handler {
 				return
 			}
 			views.Index(tournaments).Render(r.Context(), w)
+		})
+
+		r.Get("/tournaments/create", func(w http.ResponseWriter, r *http.Request) {
+			views.CreateTournamentPage().Render(r.Context(), w)
 		})
 
 		r.Post("/tournaments", func(w http.ResponseWriter, r *http.Request) {
@@ -253,10 +257,6 @@ func newRouter(sessionManager *scs.SessionManager) http.Handler {
 			return
 		}
 		http.Redirect(w, r, "/login", http.StatusFound)
-	})
-
-	r.Get("/tournaments/create", func(w http.ResponseWriter, r *http.Request) {
-		views.CreateTournamentPage().Render(r.Context(), w)
 	})
 
 	r.Get("/tournaments/{id}", func(w http.ResponseWriter, r *http.Request) {
