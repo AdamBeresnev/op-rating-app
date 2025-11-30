@@ -47,3 +47,9 @@ func (s EntryGeneration) ParseInput(ctx context.Context, entryLinks string) ([]b
 
 	return entries, links, tx.Commit()
 }
+
+func createEntryFromLink(entryLink string) (bracket.Entry, error) {
+	var entry bracket.Entry
+	var entryType string
+
+}

@@ -1,3 +1,7 @@
 ALTER TABLE entries 
-    DROP image_link
+    DROP entry_type
+;
+
+ALTER TABLE entries 
+    DROP entry_type
 ;
