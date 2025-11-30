@@ -69,64 +69,138 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 				<span class="bg-gray-800 px-2 py-1 rounded text-sm">{ string(t.Status) }</span>
 				<span class="ml-2 text-sm">Type: { string(t.Type) }</span>
 			</div>
-			<div class="space-y-12">
-				if len(wbRoundNums) > 0 {
-					<div>
-						<h2 class="text-xl font-bold mb-4 text-green-400">Winners Bracket</h2>
-						<div class="flex flex-row overflow-x-auto gap-8 pb-4">
-							for _, roundNum := range wbRoundNums {
-								<div class="flex flex-col min-w-[250px]">
-									<h3 class="text-center text-gray-400 font-bold mb-4">Round { fmt.Sprint(roundNum) }</h3>
-									<div class="flex flex-col justify-around flex-1">
-										for _, match := range wbRounds[roundNum] {
-											<div class="py-2 w-full">
-												@MatchCard(match, entryMap, nextMatchID)
+			<div
+				class="h-[calc(100vh-200px)] w-full relative overflow-hidden border border-slate-700 rounded-lg bg-slate-900/50 cursor-grab"
+				x-data="bracketViewer()"
+				@mousedown="start"
+				@mousemove="move"
+				@mouseup="end"
+				@mouseleave="end"
+				@wheel.prevent="zoom"
+				:class="cursorClass"
+			>
+				<!-- Controls -->
+				<div class="absolute top-4 right-4 z-10 flex items-center gap-2 bg-slate-800/90 backdrop-blur p-2 rounded border border-slate-700 shadow-lg">
+					<button @click.stop="zoomOut" class="w-8 h-8 flex items-center justify-center bg-slate-700 rounded hover:bg-slate-600 text-white transition-colors" title="Zoom Out">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+					</button>
+					<span x-text="Math.round(scale * 100) + '%'" class="text-xs font-mono text-slate-300 w-12 text-center select-none"></span>
+					<button @click.stop="zoomIn" class="w-8 h-8 flex items-center justify-center bg-slate-700 rounded hover:bg-slate-600 text-white transition-colors" title="Zoom In">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+					</button>
+					<div class="w-px h-4 bg-slate-600 mx-1"></div>
+					<button @click.stop="reset" class="px-3 h-8 bg-slate-700 rounded hover:bg-slate-600 text-white text-xs font-medium transition-colors" title="Reset View">Reset</button>
+				</div>
+				<div class="origin-top-left absolute will-change-transform" :style="`transform: translate(${x}px, ${y}px) scale(${scale})`">
+					<div class="p-8 space-y-12 min-w-max">
+						if len(wbRoundNums) > 0 {
+							<div>
+								<h2 class="text-xl font-bold mb-4 text-green-400">Winners Bracket</h2>
+								<div class="flex flex-row gap-8 pb-4">
+									for _, roundNum := range wbRoundNums {
+										<div class="flex flex-col min-w-[250px]">
+											<h3 class="text-center text-gray-400 font-bold mb-4">Round { fmt.Sprint(roundNum) }</h3>
+											<div class="flex flex-col justify-around flex-1">
+												for _, match := range wbRounds[roundNum] {
+													<div class="py-2 w-full">
+														@MatchCard(match, entryMap, nextMatchID)
+													</div>
+												}
 											</div>
-										}
-									</div>
+										</div>
+									}
 								</div>
-							}
-						</div>
-					</div>
-				}
-				if len(lbRoundNums) > 0 {
-					<div>
-						<h2 class="text-xl font-bold mb-4 text-orange-400">Losers Bracket</h2>
-						<div class="flex flex-row overflow-x-auto gap-8 pb-4">
-							for _, roundNum := range lbRoundNums {
-								<div class="flex flex-col min-w-[250px]">
-									<h3 class="text-center text-gray-400 font-bold mb-4">Round { fmt.Sprint(roundNum) }</h3>
-									<div class="flex flex-col justify-around flex-1">
-										for _, match := range lbRounds[roundNum] {
-											<div class="py-2 w-full">
-												@MatchCard(match, entryMap, nextMatchID)
+							</div>
+						}
+						if len(lbRoundNums) > 0 {
+							<div>
+								<h2 class="text-xl font-bold mb-4 text-orange-400">Losers Bracket</h2>
+								<div class="flex flex-row gap-8 pb-4">
+									for _, roundNum := range lbRoundNums {
+										<div class="flex flex-col min-w-[250px]">
+											<h3 class="text-center text-gray-400 font-bold mb-4">Round { fmt.Sprint(roundNum) }</h3>
+											<div class="flex flex-col justify-around flex-1">
+												for _, match := range lbRounds[roundNum] {
+													<div class="py-2 w-full">
+														@MatchCard(match, entryMap, nextMatchID)
+													</div>
+												}
 											</div>
-										}
-									</div>
+										</div>
+									}
 								</div>
-							}
-						</div>
-					</div>
-				}
-				if len(finalRoundNums) > 0 {
-					<div>
-						<h2 class="text-xl font-bold mb-4 text-yellow-400">Finals</h2>
-						<div class="flex flex-row overflow-x-auto gap-8 pb-4">
-							for _, roundNum := range finalRoundNums {
-								<div class="flex flex-col min-w-[250px]">
-									<div class="flex flex-col justify-around flex-1">
-										for _, match := range finalRounds[roundNum] {
-											<div class="py-2 w-full">
-												@MatchCard(match, entryMap, nextMatchID)
+							</div>
+						}
+						if len(finalRoundNums) > 0 {
+							<div>
+								<h2 class="text-xl font-bold mb-4 text-yellow-400">Finals</h2>
+								<div class="flex flex-row gap-8 pb-4">
+									for _, roundNum := range finalRoundNums {
+										<div class="flex flex-col min-w-[250px]">
+											<div class="flex flex-col justify-around flex-1">
+												for _, match := range finalRounds[roundNum] {
+													<div class="py-2 w-full">
+														@MatchCard(match, entryMap, nextMatchID)
+													</div>
+												}
 											</div>
-										}
-									</div>
+										</div>
+									}
 								</div>
-							}
-						</div>
+							</div>
+						}
 					</div>
-				}
+				</div>
 			</div>
+			<script>
+				document.addEventListener('alpine:init', () => {
+					Alpine.data('bracketViewer', () => ({
+						scale: 1,
+						panning: false,
+						x: 0,
+						y: 0,
+						startX: 0,
+						startY: 0,
+
+						get cursorClass() {
+							return this.panning ? 'cursor-grabbing' : 'cursor-grab';
+						},
+
+						start(e) {
+							if (e.button !== 0) return;
+							this.panning = true;
+							this.startX = e.clientX - this.x;
+							this.startY = e.clientY - this.y;
+						},
+						move(e) {
+							if (!this.panning) return;
+							e.preventDefault();
+							this.x = e.clientX - this.startX;
+							this.y = e.clientY - this.startY;
+						},
+						end() {
+							this.panning = false;
+						},
+						zoom(e) {
+							const factor = 0.1;
+							const delta = e.deltaY < 0 ? 1 : -1;
+							const newScale = this.scale + (delta * factor * this.scale);
+							this.scale = Math.min(Math.max(0.2, newScale), 5);
+						},
+						zoomIn() {
+							this.scale = Math.min(5, this.scale * 1.2);
+						},
+						zoomOut() {
+							this.scale = Math.max(0.2, this.scale / 1.2);
+						},
+						reset() {
+							this.scale = 1;
+							this.x = 0;
+							this.y = 0;
+						}
+					}))
+				});
+			</script>
 		</div>
 	}
 }
