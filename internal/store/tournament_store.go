@@ -16,14 +16,15 @@ type TournamentStore struct {
 const (
 	createTournamentQuery = `INSERT INTO tournaments (id, owner_id, name, status, tournament_type, score_requirement)
         VALUES (:id, :owner_id, :name, :status, :tournament_type, :score_requirement)`
-	createEntriesQuery = `INSERT INTO entries (id, tournament_id, name, seed, embed_link)
-            VALUES (:id, :tournament_id, :name, :seed, :embed_link)`
+	createEntriesQuery = `INSERT INTO entries (id, tournament_id, name, seed, embed_link, image_link, entry_type, entry_link)
+            VALUES (:id, :tournament_id, :name, :seed, :embed_link, :image_link, :entry_type, :entry_link)`
 	createMatchesQuery = `INSERT INTO matches (id, tournament_id, bracket_side, round_number, match_order, entry_1_id, entry_2_id, status, winner_next_match_id, winner_next_slot, loser_next_match_id, loser_next_slot, winner_slot, is_bye)
 		VALUES (:id, :tournament_id, :bracket_side, :round_number, :match_order, :entry_1_id, :entry_2_id, :status, :winner_next_match_id, :winner_next_slot, :loser_next_match_id, :loser_next_slot, :winner_slot, :is_bye)`
 	getTournamentQuery        = "SELECT * FROM tournaments WHERE id = ?"
 	getTournamentsByUserQuery = "SELECT * FROM tournaments WHERE owner_id = ? ORDER BY created_at DESC"
 	getEntriesQuery           = "SELECT * FROM entries WHERE tournament_id = ? ORDER BY seed ASC"
 	getEntryQuery             = "SELECT * FROM entries WHERE id = ?"
+	getEntryExistsQuery		  = "SELECT EXISTS(SELECT 1 FROM entries WHERE entry_link = ? LIMIT 1)" /* AND tournament_id = ? */
 	getMatchesQuery           = "SELECT * FROM matches WHERE tournament_id = ? ORDER BY round_number ASC, match_order ASC"
 	getMatchQuery             = "SELECT * FROM matches WHERE id = ?"
 	updateMatchQuery          = `UPDATE matches SET
@@ -105,6 +106,12 @@ func (s *TournamentStore) GetEntry(ctx context.Context, id string) (*bracket.Ent
 	var entry bracket.Entry
 	err := s.db.GetContext(ctx, &entry, getEntryQuery, id)
 	return &entry, err
+}
+
+func (s *TournamentStore) GetEntryCount(ctx context.Context, tournamentID string, entryLink string) (bool, error) {
+	var exists bool
+	err := s.db.GetContext(ctx, &exists, getEntryExistsQuery, entryLink/* , tournamentID */)
+	return exists, err
 }
 
 func (s *TournamentStore) GetMatches(ctx context.Context, tournamentID string) ([]bracket.Match, error) {

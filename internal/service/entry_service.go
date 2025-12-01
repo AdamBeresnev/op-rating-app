@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
@@ -33,6 +34,21 @@ func (s *EntryService) ParseInput(ctx context.Context, tournamentID string, entr
 	defer tx.Rollback()
 
 	for i, link := range links {
+		if link == "" {
+			continue
+		}
+
+		exists, err := s.store.GetEntryCount(ctx, tournamentID, entryLinks)
+		if err != nil {
+			return entries, err
+		}
+
+		fmt.Println(link, exists)
+
+		if exists {
+			continue
+		}
+
 		e, err := createEntryFromLink(tournamentID, i, link)
 
 		if err != nil {
@@ -41,6 +57,9 @@ func (s *EntryService) ParseInput(ctx context.Context, tournamentID string, entr
 
 		entries = append(entries, e)
 	}
+
+	fmt.Println(len(entries))
+
 
 	err = s.store.CreateEntries(ctx, tx, entries)
 
@@ -57,7 +76,7 @@ func createEntryFromLink(tournamentID string, seed int, entryLink string) (brack
 	placeholderName := "Anime"
 	placeholderImage := "https://pub-92474f7785774e91a790e086dfa6b2ef.r2.dev/anime/large-cover/PRdGioMCwXIr2ixbBXDC5yh4A70KA7vZ1JtqCJoE.jpg"
 
-	tournamentUUID, err := uuid.Parse(tournamentID) 
+	tournamentUUID, err := uuid.Parse(tournamentID)
 	if err != nil {
 		return entry, err
 	}
@@ -68,7 +87,8 @@ func createEntryFromLink(tournamentID string, seed int, entryLink string) (brack
 		Name:         placeholderName,
 		ImageLink:    &placeholderImage,
 		Seed:         seed,
-		EmbedLink:    utils.StringOrNil(entryLink),
+		EntryLink:    utils.StringOrNil(entryLink),
+		EmbedLink:    nil,
 	}
 
 	return entry, err

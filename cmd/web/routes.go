@@ -84,10 +84,10 @@ func newRouter(sessionManager *scs.SessionManager) http.Handler {
 				return
 			}
 
-			http.Redirect(w, r, fmt.Sprintf("/tournaments/edit/%s", id), http.StatusFound)
+			http.Redirect(w, r, fmt.Sprintf("/tournaments/%s/edit", id), http.StatusFound)
 		})
 
-		r.Get("/tournaments/edit/{id}", func(w http.ResponseWriter, r *http.Request) {
+		r.Get("/tournaments/{id}/edit", func(w http.ResponseWriter, r *http.Request) {
 			dbConn := db.GetDB()
 			bracketService := service.NewTournamentService(dbConn, store.NewTournamentStore(dbConn))
 			id := chi.URLParam(r, "id")
@@ -97,6 +97,8 @@ func newRouter(sessionManager *scs.SessionManager) http.Handler {
 				httputil.InternalServerError(w, "Failed to load tournament settings", err)
 				return
 			}
+
+			fmt.Println(len(data.Entries))
 
 			views.TournamentSettingsPage(data.Tournament, data.Entries).Render(r.Context(), w)
 		})

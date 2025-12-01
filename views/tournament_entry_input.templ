@@ -12,6 +12,7 @@ templ EntryInput(links string, entries []bracket.Entry) {
     </div>
 
     <h2 class="font-bold">Entries</h2>
+    <h2>{ len(entries) }</h2>
     <div id="entries-container" hx-get="/entries/filter" hx-trigger="change" target="#entry_links" class="flex space-y-2 flex-rows flex-wrap gap-1">
         for _, e := range entries {
             @Entry_nw(e)
