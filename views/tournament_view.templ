@@ -4,64 +4,46 @@ import (
 	"fmt"
 	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
 	"github.com/google/uuid"
-	"sort"
 )
 
+templ BracketRow(title string, titleClass string, roundNums []int, rounds map[int][]bracket.Match, entryMap map[uuid.UUID]bracket.Entry, nextMatchID *uuid.UUID) {
+	if len(roundNums) > 0 {
+		<div>
+			<h2 class={ "text-xl font-bold mb-4", titleClass }>{ title }</h2>
+			<div class="flex flex-row gap-8 pb-4">
+				for _, roundNum := range roundNums {
+					<div class="flex flex-col min-w-[250px]">
+						<h3 class="text-center text-gray-400 font-bold mb-4">Round { fmt.Sprint(roundNum) }</h3>
+						<div class="flex flex-col justify-around flex-1">
+							for _, match := range rounds[roundNum] {
+								{{ isActionable := nextMatchID != nil && *nextMatchID == match.ID }}
+								<div
+									class="py-2 w-full match-container"
+									data-match-id={ match.ID.String() }
+									data-bracket-side={ string(match.BracketSide) }
+									if isActionable {
+										data-actionable="true"
+									}
+									if match.WinnerNextMatchID != nil {
+										data-winner-next={ match.WinnerNextMatchID.String() }
+									}
+									if match.WinnerNextSlot != nil {
+										data-next-slot={ fmt.Sprint(*match.WinnerNextSlot) }
+									}
+								>
+									@MatchCard(match, entryMap, nextMatchID)
+								</div>
+							}
+						</div>
+					</div>
+				}
+			</div>
+		</div>
+	}
+}
+
 templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []bracket.Match, nextMatchID *uuid.UUID) {
-	{{
-		entryMap := make(map[uuid.UUID]bracket.Entry)
-		for _, e := range entries {
-			entryMap[e.ID] = e
-		}
-
-		wbRounds := make(map[int][]bracket.Match)
-		lbRounds := make(map[int][]bracket.Match)
-		finalRounds := make(map[int][]bracket.Match)
-
-		var wbRoundNums []int
-		var lbRoundNums []int
-		var finalRoundNums []int
-
-		for _, m := range matches {
-			switch m.BracketSide {
-			case bracket.WinnersSide:
-				if _, exists := wbRounds[m.RoundNumber]; !exists {
-					wbRoundNums = append(wbRoundNums, m.RoundNumber)
-				}
-				wbRounds[m.RoundNumber] = append(wbRounds[m.RoundNumber], m)
-			case bracket.LosersSide:
-				if _, exists := lbRounds[m.RoundNumber]; !exists {
-					lbRoundNums = append(lbRoundNums, m.RoundNumber)
-				}
-				lbRounds[m.RoundNumber] = append(lbRounds[m.RoundNumber], m)
-			case bracket.FinalsSide:
-				if _, exists := finalRounds[m.RoundNumber]; !exists {
-					finalRoundNums = append(finalRoundNums, m.RoundNumber)
-				}
-				finalRounds[m.RoundNumber] = append(finalRounds[m.RoundNumber], m)
-			}
-		}
-
-		sort.Ints(wbRoundNums)
-		sort.Ints(lbRoundNums)
-		sort.Ints(finalRoundNums)
-
-		for _, r := range wbRoundNums {
-			sort.Slice(wbRounds[r], func(i, j int) bool {
-				return wbRounds[r][i].MatchOrder < wbRounds[r][j].MatchOrder
-			})
-		}
-		for _, r := range lbRoundNums {
-			sort.Slice(lbRounds[r], func(i, j int) bool {
-				return lbRounds[r][i].MatchOrder < lbRounds[r][j].MatchOrder
-			})
-		}
-		for _, r := range finalRoundNums {
-			sort.Slice(finalRounds[r], func(i, j int) bool {
-				return finalRounds[r][i].MatchOrder < finalRounds[r][j].MatchOrder
-			})
-		}
-	}}
+	{{ data := PrepareBracketData(entries, matches) }}
 	@AppLayout(t.Name) {
 		<div class="container mx-auto p-4">
 			<h1 class="text-3xl font-bold mb-2">{ t.Name }</h1>
@@ -69,9 +51,11 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 				<span class="bg-gray-800 px-2 py-1 rounded text-sm">{ string(t.Status) }</span>
 				<span class="ml-2 text-sm">Type: { string(t.Type) }</span>
 			</div>
+			// God bless Alpine, this would've been so much worse in vanilla JS
 			<div
 				class="h-[calc(100vh-200px)] w-full relative overflow-hidden border border-slate-700 rounded-lg bg-slate-900/50 cursor-grab"
 				x-data="bracketViewer()"
+				x-ref="viewport"
 				@mousedown="start"
 				@mousemove="move"
 				@mouseup="end"
@@ -79,7 +63,7 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 				@wheel.prevent="zoom"
 				:class="cursorClass"
 			>
-				<!-- Controls -->
+				// Canvas controls
 				<div class="absolute top-4 right-4 z-10 flex items-center gap-2 bg-slate-800/90 backdrop-blur p-2 rounded border border-slate-700 shadow-lg">
 					<button @click.stop="zoomOut" class="w-8 h-8 flex items-center justify-center bg-slate-700 rounded hover:bg-slate-600 text-white transition-colors" title="Zoom Out">
 						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -91,62 +75,21 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 					<div class="w-px h-4 bg-slate-600 mx-1"></div>
 					<button @click.stop="reset" class="px-3 h-8 bg-slate-700 rounded hover:bg-slate-600 text-white text-xs font-medium transition-colors" title="Reset View">Reset</button>
 				</div>
-				<div class="origin-top-left absolute will-change-transform" :style="`transform: translate(${x}px, ${y}px) scale(${scale})`">
-					<div class="p-8 space-y-12 min-w-max">
-						if len(wbRoundNums) > 0 {
-							<div>
-								<h2 class="text-xl font-bold mb-4 text-green-400">Winners Bracket</h2>
-								<div class="flex flex-row gap-8 pb-4">
-									for _, roundNum := range wbRoundNums {
-										<div class="flex flex-col min-w-[250px]">
-											<h3 class="text-center text-gray-400 font-bold mb-4">Round { fmt.Sprint(roundNum) }</h3>
-											<div class="flex flex-col justify-around flex-1">
-												for _, match := range wbRounds[roundNum] {
-													<div class="py-2 w-full">
-														@MatchCard(match, entryMap, nextMatchID)
-													</div>
-												}
-											</div>
-										</div>
-									}
-								</div>
-							</div>
-						}
-						if len(lbRoundNums) > 0 {
-							<div>
-								<h2 class="text-xl font-bold mb-4 text-orange-400">Losers Bracket</h2>
-								<div class="flex flex-row gap-8 pb-4">
-									for _, roundNum := range lbRoundNums {
-										<div class="flex flex-col min-w-[250px]">
-											<h3 class="text-center text-gray-400 font-bold mb-4">Round { fmt.Sprint(roundNum) }</h3>
-											<div class="flex flex-col justify-around flex-1">
-												for _, match := range lbRounds[roundNum] {
-													<div class="py-2 w-full">
-														@MatchCard(match, entryMap, nextMatchID)
-													</div>
-												}
-											</div>
-										</div>
-									}
-								</div>
-							</div>
-						}
-						if len(finalRoundNums) > 0 {
-							<div>
-								<h2 class="text-xl font-bold mb-4 text-yellow-400">Finals</h2>
-								<div class="flex flex-row gap-8 pb-4">
-									for _, roundNum := range finalRoundNums {
-										<div class="flex flex-col min-w-[250px]">
-											<div class="flex flex-col justify-around flex-1">
-												for _, match := range finalRounds[roundNum] {
-													<div class="py-2 w-full">
-														@MatchCard(match, entryMap, nextMatchID)
-													</div>
-												}
-											</div>
-										</div>
-									}
-								</div>
+				<div
+					class="origin-top-left absolute will-change-transform"
+					x-ref="bracketContent"
+					:style="`transform: translate(${x}px, ${y}px) scale(${scale})`"
+				>
+					<svg class="absolute inset-0 w-full h-full pointer-events-none z-0" overflow="visible" x-html="svgContent"></svg>
+					<div class="p-8 min-w-max z-10 relative flex flex-row flex-nowrap items-center gap-16" style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 4rem;">
+						// Split winners/losers brackets into one column, grandfinals into another column
+						<div class="flex flex-col space-y-12">
+							@BracketRow("Winners Bracket", "text-green-400", data.WBRoundNums, data.WBRounds, data.EntryMap, nextMatchID)
+							@BracketRow("Losers Bracket", "text-orange-400", data.LBRoundNums, data.LBRounds, data.EntryMap, nextMatchID)
+						</div>
+						if len(data.FinalRoundNums) > 0 {
+							<div class="flex flex-col justify-center" x-ref="finalsColumn">
+								@BracketRow("Finals", "text-yellow-400", data.FinalRoundNums, data.FinalRounds, data.EntryMap, nextMatchID)
 							</div>
 						}
 					</div>
@@ -161,6 +104,210 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 						y: 0,
 						startX: 0,
 						startY: 0,
+						svgContent: '',
+
+						init() {
+							this.$nextTick(() => {
+                                this.alignFinals();
+								this.drawLines();
+                                this.focusActiveMatch();
+								window.addEventListener('resize', () => {
+                                    this.alignFinals();
+                                    this.drawLines();
+                                    this.constrain();
+                                });
+								// Re-draw after a short delay to ensure layout stability
+								setTimeout(() => {
+                                    this.alignFinals();
+                                    this.drawLines();
+                                    this.focusActiveMatch();
+                                }, 100);
+							});
+						},
+
+                        focusActiveMatch() {
+                            const active = this.$root.querySelector('[data-actionable="true"]');
+                            if (active) {
+                                const container = this.$refs.viewport;
+                                const content = this.$refs.bracketContent;
+                                
+                                let el = active;
+                                let unscaledX = 0;
+                                let unscaledY = 0;
+                                
+                                while (el && el !== content) {
+                                    unscaledX += el.offsetLeft;
+                                    unscaledY += el.offsetTop;
+                                    el = el.offsetParent;
+                                }
+
+                                const finalsCol = this.$refs.finalsColumn;
+                                if (finalsCol && finalsCol.contains(active)) {
+                                    const transform = finalsCol.style.transform; // e.g. "translateY(123px)"
+                                    const match = transform.match(/translateY\(([-0-9.]+)px\)/);
+                                    if (match && match[1]) {
+                                        unscaledY += parseFloat(match[1]);
+                                    }
+                                }
+
+                                const activeW = active.offsetWidth;
+                                const activeH = active.offsetHeight;
+                                const contentCenterX = unscaledX + (activeW / 2);
+                                const contentCenterY = unscaledY + (activeH / 2);
+
+                                this.scale = 1;
+
+                                const newX = (container.clientWidth / 2) - contentCenterX;
+                                const newY = (container.clientHeight / 2) - contentCenterY;
+
+                                this.x = newX;
+                                this.y = newY;
+                                
+                                this.constrain();
+                            } else {
+                                this.fitToScreen();
+                            }
+                        },
+
+						// Default view if there's no active match to focus on
+                        fitToScreen() {
+                            const container = this.$refs.viewport;
+                            const content = this.$refs.bracketContent;
+                            if (!container || !content) return;
+
+                            const cw = container.clientWidth;
+                            const ch = container.clientHeight;
+                            const bw = content.scrollWidth;
+                            const bh = content.scrollHeight;
+                            const padding = 50;
+
+                            const scaleX = (cw - padding * 2) / bw;
+                            const scaleY = (ch - padding * 2) / bh;
+                            
+                            let newScale = Math.min(scaleX, scaleY, 1); 
+                            this.scale = Math.max(0.2, newScale); 
+
+                            this.x = (cw - bw * this.scale) / 2;
+                            this.y = (ch - bh * this.scale) / 2;
+                        },
+
+						// Infinite canvas is horrible UX, so we constrain the user from going into the infinite abyss
+                        constrain() {
+                            const container = this.$refs.viewport;
+                            const content = this.$refs.bracketContent;
+                            
+                            if (!container || !content) return;
+
+                            const cw = container.clientWidth;
+                            const ch = container.clientHeight;
+                            const bw = content.scrollWidth;
+                            const bh = content.scrollHeight;
+                            
+                            const padding = 50;
+                            
+                            const sw = bw * this.scale;
+                            const sh = bh * this.scale;
+                            
+                            // Horizontal
+                            if (sw < cw) {
+                                this.x = (cw - sw) / 2;
+                            } else {
+                                const minX = cw - sw - padding;
+                                const maxX = padding;
+                                this.x = Math.min(maxX, Math.max(this.x, minX));
+                            }
+                            
+                            // Vertical
+                            if (sh < ch) {
+                                this.y = (ch - sh) / 2;
+                            } else {
+                                const minY = ch - sh - padding;
+                                const maxY = padding;
+                                this.y = Math.min(maxY, Math.max(this.y, minY));
+                            }
+                        },
+
+						// This was painful
+						// Center the finals not in the middle of the column, but in the middle of the winner's and loser's finals
+                        alignFinals() {
+                            const finalsCol = this.$refs.finalsColumn;
+                            if (!finalsCol) return;
+
+                            // Reset transform to read the position
+							// This was also painful
+                            finalsCol.style.transform = '';
+
+                            const containers = Array.from(this.$root.querySelectorAll('[data-match-id]'));
+                        
+                            const grandFinal = containers.find(el => el.dataset.bracketSide === 'finals');
+
+                            // Find inputs to the grand final by looking for matches that point TO the grand final
+                            let winnersFinal = null;
+                            let losersFinal = null;
+
+                            if (grandFinal) {
+                                const gfId = grandFinal.dataset.matchId;
+                                winnersFinal = containers.find(el => el.dataset.winnerNext === gfId && el.dataset.bracketSide === 'winners');
+                                losersFinal = containers.find(el => el.dataset.winnerNext === gfId && el.dataset.bracketSide === 'losers');
+                            }
+
+                            if (winnersFinal && losersFinal && grandFinal) {
+                                const rectW = winnersFinal.getBoundingClientRect();
+                                const rectL = losersFinal.getBoundingClientRect();
+                                const rectGF = grandFinal.getBoundingClientRect();
+
+                                const centerW = rectW.top + rectW.height / 2;
+                                const centerL = rectL.top + rectL.height / 2;
+                                const targetCenterY = (centerW + centerL) / 2;
+                                
+                                const currentCenterY = rectGF.top + rectGF.height / 2;
+                                // Evil scaling
+                                const offset = (targetCenterY - currentCenterY) / this.scale;
+
+                                finalsCol.style.transform = `translateY(${offset}px)`;
+                            }
+                        },
+
+						drawLines() {
+							const containers = this.$root.querySelectorAll('[data-match-id]');
+							const map = new Map();
+							containers.forEach(el => map.set(el.dataset.matchId, el));
+
+							const rootRect = this.$refs.bracketContent.getBoundingClientRect();
+							const s = this.scale;
+							
+							let newSvgContent = '';
+
+							containers.forEach(source => {
+								const draw = (targetId) => {
+									if (!targetId || !map.has(targetId)) return;
+									const target = map.get(targetId);
+									
+									const sourceRect = source.getBoundingClientRect();
+									const targetRect = target.getBoundingClientRect();
+									
+									let yOffsetRatio = 0.5;
+									if (source.dataset.nextSlot === '1') yOffsetRatio = 0.25;
+									else if (source.dataset.nextSlot === '2') yOffsetRatio = 0.75;
+
+									// Calculate coords in unscaled SVG space
+									const x1 = (sourceRect.right - rootRect.left) / s;
+									const y1 = (sourceRect.top + sourceRect.height/2 - rootRect.top) / s;
+									const x2 = (targetRect.left - rootRect.left) / s;
+									const y2 = (targetRect.top + (targetRect.height * yOffsetRatio) - rootRect.top) / s;
+									
+									// Edge case for grandfinals so the bracket lines break properly and don't look ass
+									const midX = x2 - Math.min((x2 - x1) / 2, 40);
+									
+									const color = '#94a3b8';
+									newSvgContent += `<path d="M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="2" opacity="0.6" />`;
+								};
+
+								draw(source.dataset.winnerNext);
+							});
+							
+							this.svgContent = newSvgContent;
+						},
 
 						get cursorClass() {
 							return this.panning ? 'cursor-grabbing' : 'cursor-grab';
@@ -177,26 +324,45 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 							e.preventDefault();
 							this.x = e.clientX - this.startX;
 							this.y = e.clientY - this.startY;
+                            this.constrain();
 						},
 						end() {
 							this.panning = false;
 						},
+						// Zoom to mouse logic (grahhh I love overengineering)
 						zoom(e) {
+                            const rect = this.$refs.viewport.getBoundingClientRect();
+                            const mouseX = e.clientX - rect.left;
+                            const mouseY = e.clientY - rect.top;
+
+                            const oldScale = this.scale;
+                            
 							const factor = 0.1;
 							const delta = e.deltaY < 0 ? 1 : -1;
-							const newScale = this.scale + (delta * factor * this.scale);
-							this.scale = Math.min(Math.max(0.2, newScale), 5);
+							const newScaleRaw = oldScale + (delta * factor * oldScale);
+							const newScale = Math.min(Math.max(0.2, newScaleRaw), 5);
+
+                            // Calculate the point under the mouse in content space
+                            const contentPointX = (mouseX - this.x) / oldScale;
+                            const contentPointY = (mouseY - this.y) / oldScale;
+
+                            // Calculate new x/y to keep contentPoint under mouse
+                            this.x = mouseX - (contentPointX * newScale);
+                            this.y = mouseY - (contentPointY * newScale);
+                            
+                            this.scale = newScale;
+                            this.constrain();
 						},
 						zoomIn() {
 							this.scale = Math.min(5, this.scale * 1.2);
+                            this.constrain();
 						},
 						zoomOut() {
 							this.scale = Math.max(0.2, this.scale / 1.2);
+                            this.constrain();
 						},
 						reset() {
-							this.scale = 1;
-							this.x = 0;
-							this.y = 0;
+                            this.focusActiveMatch();
 						}
 					}))
 				});
