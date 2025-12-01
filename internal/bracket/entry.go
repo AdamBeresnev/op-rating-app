@@ -15,6 +15,7 @@ type Entry struct {
 	Name         string    `db:"name"`
 	Seed         int       `db:"seed"`
 	EmbedLink    *string   `db:"embed_link"`
+	EntryLink    *string   `db:"entry_link"`
 	ImageLink    *string   `db:"image_link"`
 	Type         EntryType `db:"entry_type"`
 }
