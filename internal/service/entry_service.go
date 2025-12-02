@@ -38,7 +38,7 @@ func (s *EntryService) ParseInput(ctx context.Context, tournamentID string, entr
 			continue
 		}
 
-		exists, err := s.store.GetEntryCount(ctx, tournamentID, entryLinks)
+		exists, err := s.store.GetEntryCount(ctx, tournamentID, link)
 		if err != nil {
 			return entries, err
 		}
