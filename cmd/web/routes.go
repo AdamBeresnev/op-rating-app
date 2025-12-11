@@ -130,6 +130,10 @@ func newRouter(sessionManager *scs.SessionManager) http.Handler {
 			}
 
 			if id, err := bracketService.CreateTournament(r.Context(), name, tournamentType, entries); err != nil {
+				if errors.Is(err, service.ErrNotEnoughEntries) {
+					httputil.BadRequest(w, err.Error(), err)
+					return
+				}
 				httputil.InternalServerError(w, "Failed to create tournament", err)
 				return
 			} else {

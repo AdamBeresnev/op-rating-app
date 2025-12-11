@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/AdamBeresnev/op-rating-app/internal/bracket"
@@ -130,23 +129,21 @@ func TestCreateTournament(t *testing.T) {
 			entryInputs: []EntryInput{
 				{Name: "Solo Entry"},
 			},
-			expectedTournamentCount: 1,
-			expectedEntryCount:      1,
+			expectedTournamentCount: 0,
+			expectedEntryCount:      0,
 			expectedMatchCount:      0,
-			expectedError:           false,
+			expectedError:           true,
 		},
 		{
 			name:                    "Tournament creation with 0 entries",
 			tournamentName:          "Test Tournament 0",
 			entryInputs:             []EntryInput{},
-			expectedTournamentCount: 1,
+			expectedTournamentCount: 0,
 			expectedEntryCount:      0,
 			expectedMatchCount:      0,
-			expectedError:           false,
+			expectedError:           true,
 		},
 	}
-
-	fmt.Println(testCases)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

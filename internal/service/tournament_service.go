@@ -13,6 +13,8 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+var ErrNotEnoughEntries = fmt.Errorf("tournament must have at least 2 entries")
+
 type TournamentService struct {
 	db    *sqlx.DB
 	store *store.TournamentStore
@@ -341,6 +343,10 @@ func (s *TournamentService) GenerateDoubleElimBracket(tournamentID uuid.UUID, en
 }
 
 func (s *TournamentService) CreateTournament(ctx context.Context, name string, tournamentType bracket.TournamentType, entryInputs []EntryInput) (uuid.UUID, error) {
+	if len(entryInputs) < 2 {
+		return uuid.Nil, ErrNotEnoughEntries
+	}
+
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return uuid.Nil, err
