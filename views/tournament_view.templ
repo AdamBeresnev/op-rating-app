@@ -57,8 +57,11 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 				x-data="bracketViewer()"
 				x-ref="viewport"
 				@mousedown="start"
+				@touchstart="start"
 				@mousemove="move"
+				@touchmove="move"
 				@mouseup="end"
+				@touchend="end"
 				@mouseleave="end"
 				@wheel.prevent="zoom"
 				:class="cursorClass"
@@ -100,10 +103,12 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 					Alpine.data('bracketViewer', () => ({
 						scale: 1,
 						panning: false,
+						pinching: false,
 						x: 0,
 						y: 0,
 						startX: 0,
 						startY: 0,
+						lastDist: 0,
 						svgContent: '',
 
 						init() {
@@ -314,20 +319,66 @@ templ TournamentView(t *bracket.Tournament, entries []bracket.Entry, matches []b
 						},
 
 						start(e) {
-							if (e.button !== 0) return;
+							if (e.type === 'mousedown' && e.button !== 0) return;
+
+							if (e.touches && e.touches.length === 2) {
+								this.panning = false;
+								this.pinching = true;
+								this.lastDist = Math.hypot(
+									e.touches[0].clientX - e.touches[1].clientX,
+									e.touches[0].clientY - e.touches[1].clientY
+								);
+								return;
+							}
+
 							this.panning = true;
-							this.startX = e.clientX - this.x;
-							this.startY = e.clientY - this.y;
+							const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+							const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+							this.startX = clientX - this.x;
+							this.startY = clientY - this.y;
 						},
 						move(e) {
+							if (this.pinching) {
+								if (!e.touches || e.touches.length !== 2) return;
+								if (e.cancelable) e.preventDefault();
+
+								const dist = Math.hypot(
+									e.touches[0].clientX - e.touches[1].clientX,
+									e.touches[0].clientY - e.touches[1].clientY
+								);
+								
+								if (dist < 5 || this.lastDist < 5) return;
+
+								const rect = this.$refs.viewport.getBoundingClientRect();
+								const midX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+								const midY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
+
+								const ratio = dist / this.lastDist;
+								const newScaleRaw = this.scale * ratio;
+								const newScale = Math.min(Math.max(0.2, newScaleRaw), 5);
+								
+								this.x = midX - ((midX - this.x) / this.scale) * newScale;
+								this.y = midY - ((midY - this.y) / this.scale) * newScale;
+								this.scale = newScale;
+								this.lastDist = dist;
+								
+								this.constrain();
+								return;
+							}
+
 							if (!this.panning) return;
-							e.preventDefault();
-							this.x = e.clientX - this.startX;
-							this.y = e.clientY - this.startY;
+							if (e.cancelable) e.preventDefault();
+							const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+							const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+							this.x = clientX - this.startX;
+							this.y = clientY - this.startY;
                             this.constrain();
 						},
-						end() {
+						end(e) {
 							this.panning = false;
+							if (e.touches && e.touches.length < 2) {
+								this.pinching = false;
+							}
 						},
 						// Zoom to mouse logic (grahhh I love overengineering)
 						zoom(e) {
